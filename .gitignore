@@ -1,0 +1,55 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Tauri
+/src-tauri/target/
+/src-tauri/gen/
+/src-tauri/*.app/
+/src-tauri/*.dmg/
+/src-tauri/*.msi/
+/src-tauri/*.exe/
+/src-tauri/*.AppImage/
+/src-tauri/*.deb/
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.lcov
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Tauri specific
+**/.tauri/
+**/icons/
+!**/icons/.gitkeep

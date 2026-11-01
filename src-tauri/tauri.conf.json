@@ -1,0 +1,79 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OfflineLauncher",
+  "version": "0.1.0",
+  "identifier": "com.offlinelauncher.app",
+  "build": {
+    "beforeDevCommand": "npm run dev --prefix ../frontend",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build --prefix ../frontend",
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "OfflineLauncher",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": "",
+      "signingIdentity": null
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "librsvg2-common"]
+      },
+      "appimage": {
+        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "librsvg2-common"]
+      }
+    }
+  },
+  "plugins": {
+    "fs": {
+      "scope": {
+        "allowed": [
+          "$APPDATA/*",
+          "$HOME/*"
+        ]
+      }
+    },
+    "shell": {
+      "scope": {
+        "allowlist": [
+          {
+            "name": "java",
+            "cmd": "java",
+            "args": true
+          }
+        ]
+      }
+    }
+  }
+}

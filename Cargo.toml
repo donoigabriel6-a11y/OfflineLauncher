@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = ["src-tauri"]
+exclude = ["frontend"]
+
+[workspace.dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-fs = "2.0"
+tauri-plugin-opener = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-process = "2.0"
+tauri-plugin-store = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_with = "3.0"
+thiserror = "1.0"
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1.0", features = ["v4", "serde", "v3"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "gzip", "stream"] }
+sha1 = { version = "0.10", features = ["asm"] }
+md5 = "0.7"
+dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
+semver = "1.0"
+zip = "0.6"
+flate2 = "1.0"
+tar = "0.4"
+async-trait = "0.1"
+futures = "0.3"
+parking_lot = "0.12"
+dashmap = "5.0"
+indicatif = "0.17"
+clap = { version = "4.0", features = ["derive"] }
+toml = "0.8"
+notify = "6.0"
+walkdir = "2.0"
