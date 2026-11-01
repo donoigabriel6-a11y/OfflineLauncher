@@ -37,7 +37,8 @@ export const versionsApi = {
   fetchManifest: () => invoke<VersionManifest>('versions_fetch_manifest'),
   list: (versionType?: string) => invoke<VersionEntry[]>('versions_list', { versionType }),
   download: (versionId: string) => invoke('versions_download', { versionId }),
-  getVersionJson: (versionId: string) => invoke<VersionJson>('versions_get_version_json', { versionId }),
+  getVersionJson: (versionId: string) =>
+    invoke<VersionJson>('versions_get_version_json', { versionId }),
 };
 
 // Java
@@ -51,7 +52,8 @@ export const javaApi = {
 // Instances
 export const instancesApi = {
   list: () => invoke<Instance[]>('instances_list'),
-  create: (name: string, versionId: string) => invoke<Instance>('instances_create', { name, versionId }),
+  create: (name: string, versionId: string) =>
+    invoke<Instance>('instances_create', { name, versionId }),
   update: (instance: Instance) => invoke<Instance>('instances_update', { instance }),
   delete: (id: string) => invoke('instances_delete', { id }),
   clone: (id: string, newName: string) => invoke<Instance>('instances_clone', { id, newName }),
@@ -60,7 +62,8 @@ export const instancesApi = {
 
 // Launch
 export const launchApi = {
-  start: (instanceId: string, accountId: string) => invoke('launch_start', { instanceId, accountId }),
+  start: (instanceId: string, accountId: string) =>
+    invoke('launch_start', { instanceId, accountId }),
   kill: (instanceId: string) => invoke('launch_kill', { instanceId }),
 };
 

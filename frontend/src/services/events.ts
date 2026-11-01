@@ -3,7 +3,11 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type { DownloadProgress, LaunchOutput, LaunchStatus } from '@/types';
 
 type DownloadProgressCallback = (progress: DownloadProgress) => void;
-type DownloadCompleteCallback = (event: { versionId: string; success: boolean; error?: string }) => void;
+type DownloadCompleteCallback = (event: {
+  versionId: string;
+  success: boolean;
+  error?: string;
+}) => void;
 type LaunchOutputCallback = (output: LaunchOutput) => void;
 type LaunchStatusCallback = (status: LaunchStatus) => void;
 type AccountsChangedCallback = (event: { action: string; account: Account }) => void;

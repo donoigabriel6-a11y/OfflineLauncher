@@ -62,16 +62,6 @@ pub trait Account: Send + Sync + std::any::Any {
     fn as_any(&self) -> &dyn std::any::Any;
 }
 
-    /// Last update timestamp
-    fn updated_at(&self) -> DateTime<Utc>;
-
-    /// Update the username (for offline accounts)
-    async fn set_username(&mut self, username: String) -> crate::error::Result<()>;
-
-    /// Update the skin path
-    async fn set_skin_path(&mut self, path: Option<PathBuf>) -> crate::error::Result<()>;
-}
-
 /// Offline account implementation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

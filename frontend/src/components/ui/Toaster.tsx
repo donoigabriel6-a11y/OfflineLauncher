@@ -52,11 +52,17 @@ export function useToast() {
   return context;
 }
 
-function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
+function ToastContainer({
+  toasts,
+  onDismiss,
+}: {
+  toasts: Toast[];
+  onDismiss: (id: string) => void;
+}) {
   if (toasts.length === 0) return null;
 
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
@@ -85,24 +91,22 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   return (
     <div
       className={cn(
-        'pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg min-w-[300px] max-w-md animate-in',
+        'animate-in pointer-events-auto flex min-w-[300px] max-w-md items-start gap-3 rounded-xl border p-4 shadow-lg',
         colors[toast.type]
       )}
       role="alert"
     >
-      <Icon className="w-5 h-5 mt-0.5 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
+      <Icon className="mt-0.5 h-5 w-5 flex-shrink-0" />
+      <div className="min-w-0 flex-1">
         <p className="font-medium text-surface-100">{toast.title}</p>
-        {toast.message && (
-          <p className="mt-1 text-sm text-surface-400">{toast.message}</p>
-        )}
+        {toast.message && <p className="mt-1 text-sm text-surface-400">{toast.message}</p>}
       </div>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="p-1 rounded-lg text-surface-500 hover:text-surface-100 hover:bg-surface-800 transition-colors flex-shrink-0"
+        className="flex-shrink-0 rounded-lg p-1 text-surface-500 transition-colors hover:bg-surface-800 hover:text-surface-100"
         aria-label="Dismiss"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

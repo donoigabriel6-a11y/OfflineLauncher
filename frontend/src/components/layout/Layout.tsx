@@ -9,9 +9,14 @@ export function Layout() {
   const { sidebarOpen } = useStore();
 
   return (
-    <div className="min-h-screen bg-surface-950 flex">
+    <div className="flex min-h-screen bg-surface-950">
       <Sidebar />
-      <div className={cn('flex-1 flex flex-col transition-all duration-300', sidebarOpen ? 'ml-64' : 'ml-20')}>
+      <div
+        className={cn(
+          'flex flex-1 flex-col transition-all duration-300',
+          sidebarOpen ? 'ml-64' : 'ml-20'
+        )}
+      >
         <Outlet />
       </div>
     </div>
@@ -21,7 +26,7 @@ export function Layout() {
 export function PageLayout({
   children,
   className = '',
-  padding = 'md'
+  padding = 'md',
 }: {
   children: React.ReactNode;
   className?: string;
@@ -35,8 +40,6 @@ export function PageLayout({
   };
 
   return (
-    <main className={cn('flex-1 overflow-auto', paddings[padding], className)}>
-      {children}
-    </main>
+    <main className={cn('flex-1 overflow-auto', paddings[padding], className)}>{children}</main>
   );
 }

@@ -27,40 +27,40 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-surface-950/95 border-r border-surface-800 backdrop-blur-sm transition-all duration-300 flex flex-col',
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-surface-800 bg-surface-950/95 backdrop-blur-sm transition-all duration-300',
         sidebarOpen ? 'w-64' : 'w-20'
       )}
     >
       {/* Logo / Brand */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-surface-800">
+      <div className="flex h-16 items-center justify-between border-b border-surface-800 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-            <Package className="w-5 h-5 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
+            <Package className="h-5 w-5 text-white" />
           </div>
           {sidebarOpen && (
-            <span className="font-bold text-lg text-surface-100">OfflineLauncher</span>
+            <span className="text-lg font-bold text-surface-100">OfflineLauncher</span>
           )}
         </div>
         <button
           onClick={toggleSidebar}
           className={cn(
-            'p-1.5 rounded-lg text-surface-500 hover:text-surface-100 hover:bg-surface-800 transition-colors',
+            'rounded-lg p-1.5 text-surface-500 transition-colors hover:bg-surface-800 hover:text-surface-100',
             sidebarOpen ? 'ml-auto' : 'mx-auto'
           )}
           aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
-          {sidebarOpen ? (
-            <ChevronLeft className="w-5 h-5" />
-          ) : (
-            <ChevronRight className="w-5 h-5" />
-          )}
+          {sidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin" aria-label="Main navigation">
+      <nav
+        className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-4"
+        aria-label="Main navigation"
+      >
         {navigation.map((item) => {
-          const isActive = location.pathname === item.path ||
+          const isActive =
+            location.pathname === item.path ||
             (item.path !== '/' && location.pathname.startsWith(item.path));
           const Icon = item.icon;
 
@@ -68,14 +68,11 @@ export function Sidebar() {
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive: active }) => cn(
-                'sidebar-item group',
-                active && 'active'
-              )}
+              className={({ isActive: active }) => cn('sidebar-item group', active && 'active')}
               title={sidebarOpen ? undefined : item.label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+              <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
               {sidebarOpen && <span className="font-medium">{item.label}</span>}
             </NavLink>
           );
@@ -83,12 +80,8 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="p-3 border-t border-surface-800">
-        {sidebarOpen && (
-          <div className="text-xs text-surface-500 text-center">
-            v0.1.0
-          </div>
-        )}
+      <div className="border-t border-surface-800 p-3">
+        {sidebarOpen && <div className="text-center text-xs text-surface-500">v0.1.0</div>}
       </div>
     </aside>
   );

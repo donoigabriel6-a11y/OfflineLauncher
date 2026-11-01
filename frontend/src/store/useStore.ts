@@ -1,7 +1,16 @@
 // Zustand store for global state
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Account, Instance, VersionEntry, Config, JavaSelection, DownloadProgress, LaunchOutput, LaunchStatus } from '@/types';
+import type {
+  Account,
+  Instance,
+  VersionEntry,
+  Config,
+  JavaSelection,
+  DownloadProgress,
+  LaunchOutput,
+  LaunchStatus,
+} from '@/types';
 
 interface AppState {
   // Theme
@@ -94,12 +103,14 @@ export const useStore = create<AppState>()(
       accounts: [],
       setAccounts: (accounts) => set({ accounts }),
       addAccount: (account) => set((state) => ({ accounts: [...state.accounts, account] })),
-      updateAccount: (account) => set((state) => ({
-        accounts: state.accounts.map((a) => (a.id === account.id ? account : a)),
-      })),
-      removeAccount: (id) => set((state) => ({
-        accounts: state.accounts.filter((a) => a.id !== id),
-      })),
+      updateAccount: (account) =>
+        set((state) => ({
+          accounts: state.accounts.map((a) => (a.id === account.id ? account : a)),
+        })),
+      removeAccount: (id) =>
+        set((state) => ({
+          accounts: state.accounts.filter((a) => a.id !== id),
+        })),
       selectedAccountId: null,
       setSelectedAccountId: (id) => set({ selectedAccountId: id }),
 
@@ -107,12 +118,14 @@ export const useStore = create<AppState>()(
       instances: [],
       setInstances: (instances) => set({ instances }),
       addInstance: (instance) => set((state) => ({ instances: [...state.instances, instance] })),
-      updateInstance: (instance) => set((state) => ({
-        instances: state.instances.map((i) => (i.id === instance.id ? instance : i)),
-      })),
-      removeInstance: (id) => set((state) => ({
-        instances: state.instances.filter((i) => i.id !== id),
-      })),
+      updateInstance: (instance) =>
+        set((state) => ({
+          instances: state.instances.map((i) => (i.id === instance.id ? instance : i)),
+        })),
+      removeInstance: (id) =>
+        set((state) => ({
+          instances: state.instances.filter((i) => i.id !== id),
+        })),
       selectedInstanceId: null,
       setSelectedInstanceId: (id) => set({ selectedInstanceId: id }),
 
@@ -126,36 +139,41 @@ export const useStore = create<AppState>()(
 
       // Downloads
       downloads: new Map(),
-      setDownloadProgress: (progress) => set((state) => {
-        const newDownloads = new Map(state.downloads);
-        newDownloads.set(progress.versionId, progress);
-        return { downloads: newDownloads };
-      }),
-      removeDownload: (versionId) => set((state) => {
-        const newDownloads = new Map(state.downloads);
-        newDownloads.delete(versionId);
-        return { downloads: newDownloads };
-      }),
+      setDownloadProgress: (progress) =>
+        set((state) => {
+          const newDownloads = new Map(state.downloads);
+          newDownloads.set(progress.versionId, progress);
+          return { downloads: newDownloads };
+        }),
+      removeDownload: (versionId) =>
+        set((state) => {
+          const newDownloads = new Map(state.downloads);
+          newDownloads.delete(versionId);
+          return { downloads: newDownloads };
+        }),
 
       // Launch
       launchOutputs: new Map(),
-      addLaunchOutput: (instanceId, output) => set((state) => {
-        const newOutputs = new Map(state.launchOutputs);
-        const existing = newOutputs.get(instanceId) || [];
-        newOutputs.set(instanceId, [...existing, output]);
-        return { launchOutputs: newOutputs };
-      }),
-      clearLaunchOutputs: (instanceId) => set((state) => {
-        const newOutputs = new Map(state.launchOutputs);
-        newOutputs.delete(instanceId);
-        return { launchOutputs: newOutputs };
-      }),
+      addLaunchOutput: (instanceId, output) =>
+        set((state) => {
+          const newOutputs = new Map(state.launchOutputs);
+          const existing = newOutputs.get(instanceId) || [];
+          newOutputs.set(instanceId, [...existing, output]);
+          return { launchOutputs: newOutputs };
+        }),
+      clearLaunchOutputs: (instanceId) =>
+        set((state) => {
+          const newOutputs = new Map(state.launchOutputs);
+          newOutputs.delete(instanceId);
+          return { launchOutputs: newOutputs };
+        }),
       launchStatus: new Map(),
-      setLaunchStatus: (status) => set((state) => {
-        const newStatus = new Map(state.launchStatus);
-        newStatus.set(status.instanceId, status);
-        return { launchStatus: newStatus };
-      }),
+      setLaunchStatus: (status) =>
+        set((state) => {
+          const newStatus = new Map(state.launchStatus);
+          newStatus.set(status.instanceId, status);
+          return { launchStatus: newStatus };
+        }),
 
       // Java
       javaInstallations: [],

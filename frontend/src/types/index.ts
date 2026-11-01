@@ -199,13 +199,7 @@ export interface DownloadProgress {
 }
 
 export type DownloadStage =
-  | 'version_json'
-  | 'client_jar'
-  | 'libraries'
-  | 'assets_index'
-  | 'assets'
-  | 'natives'
-  | 'complete';
+  'version_json' | 'client_jar' | 'libraries' | 'assets_index' | 'assets' | 'natives' | 'complete';
 
 export interface LaunchOutput {
   instanceId: string;

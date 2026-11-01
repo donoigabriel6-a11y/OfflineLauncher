@@ -10,24 +10,12 @@ import { useStore } from '@/store/useStore';
 import { useToast } from '@/components/ui/Toaster';
 import { versionsApi } from '@/services/api';
 import { eventManager } from '@/services/events';
-import {
-  Download,
-  RefreshCw,
-  Filter,
-  Loader2,
-  FolderOpen,
-} from 'lucide-react';
+import { Download, RefreshCw, Filter, Loader2, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Versions() {
-  const {
-    versions,
-    setVersions,
-    versionFilter,
-    setVersionFilter,
-    downloads,
-    selectedVersionId,
-  } = useStore();
+  const { versions, setVersions, versionFilter, setVersionFilter, downloads, selectedVersionId } =
+    useStore();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,7 +45,11 @@ export function Versions() {
     eventManager.setupDownloadComplete((event) => {
       useStore.getState().removeDownload(event.versionId);
       if (event.success) {
-        toast({ type: 'success', title: 'Download Complete', message: `Version ${event.versionId} is ready` });
+        toast({
+          type: 'success',
+          title: 'Download Complete',
+          message: `Version ${event.versionId} is ready`,
+        });
       } else {
         toast({ type: 'error', title: 'Download Failed', message: event.error || 'Unknown error' });
       }
@@ -83,7 +75,11 @@ export function Versions() {
     try {
       await versionsApi.download(versionId);
     } catch (error) {
-      toast({ type: 'error', title: 'Download Failed', message: error instanceof Error ? error.message : 'Unknown error' });
+      toast({
+        type: 'error',
+        title: 'Download Failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   };
 
@@ -98,7 +94,8 @@ export function Versions() {
       // Type filter
       if (versionFilter !== 'all' && version.type !== versionFilter) return false;
       // Search filter
-      if (searchQuery && !version.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !version.id.toLowerCase().includes(searchQuery.toLowerCase()))
+        return false;
       return true;
     });
   }, [versions, versionFilter, searchQuery]);
@@ -132,25 +129,29 @@ export function Versions() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       <Header
         title="Versions"
         subtitle="Browse and download Minecraft versions"
         actions={
-          <Button variant="secondary" onClick={handleRefresh} leftIcon={<RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />}>
+          <Button
+            variant="secondary"
+            onClick={handleRefresh}
+            leftIcon={<RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />}
+          >
             Refresh
           </Button>
         }
       />
 
       <PageLayout>
-        <div className="max-w-4xl mx-auto w-full space-y-6">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
           {/* Filters */}
           <Card>
             <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
                 <div className="relative flex-1">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
+                  <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-500" />
                   <Input
                     placeholder="Search versions..."
                     value={searchQuery}
@@ -179,7 +180,7 @@ export function Versions() {
           {loading ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+                <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary-500" />
                 <p className="text-surface-500">Loading versions...</p>
               </CardContent>
             </Card>
@@ -193,32 +194,45 @@ export function Versions() {
             <div className="space-y-3">
               {sortedVersions.map((version) => {
                 const progress = downloads.get(version.id);
-                const isDownloaded = progress && progress.stage === 'complete' && progress.downloaded === progress.total;
+                const isDownloaded =
+                  progress &&
+                  progress.stage === 'complete' &&
+                  progress.downloaded === progress.total;
                 const isCurrentDownload = progress && progress.stage !== 'complete';
 
                 return (
-                  <Card key={version.id} hover className={cn(selectedVersionId === version.id && 'border-primary-500/50')}>
+                  <Card
+                    key={version.id}
+                    hover
+                    className={cn(selectedVersionId === version.id && 'border-primary-500/50')}
+                  >
                     <CardContent className="pt-0">
                       <div className="flex items-center gap-4 p-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="font-medium text-surface-100 truncate">{version.id}</h3>
-                            <span className={cn(
-                              'px-2 py-0.5 text-xs rounded-full border',
-                              typeColors[version.type]
-                            )}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="truncate font-medium text-surface-100">{version.id}</h3>
+                            <span
+                              className={cn(
+                                'rounded-full border px-2 py-0.5 text-xs',
+                                typeColors[version.type]
+                              )}
+                            >
                               {typeLabels[version.type] || version.type}
                             </span>
                             {version.complianceLevel > 0 && (
-                              <span className="px-2 py-0.5 text-xs bg-surface-800 text-surface-500 rounded-full">
+                              <span className="rounded-full bg-surface-800 px-2 py-0.5 text-xs text-surface-500">
                                 Compliance: {version.complianceLevel}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-surface-500">
-                            <span>Released: {new Date(version.releaseTime).toLocaleDateString()}</span>
+                          <div className="mt-2 flex items-center gap-4 text-sm text-surface-500">
+                            <span>
+                              Released: {new Date(version.releaseTime).toLocaleDateString()}
+                            </span>
                             {version.sha1 && (
-                              <span className="font-mono text-xs">SHA1: {version.sha1.slice(0, 12)}...</span>
+                              <span className="font-mono text-xs">
+                                SHA1: {version.sha1.slice(0, 12)}...
+                              </span>
                             )}
                           </div>
 
@@ -226,15 +240,24 @@ export function Versions() {
                           {isCurrentDownload && (
                             <div className="mt-3 space-y-1">
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-surface-400">{progress?.fileName || 'Downloading...'}</span>
-                                <span className="text-primary-400 font-mono">
-                                  {progress ? Math.round((progress.downloaded / progress.total) * 100) : 0}%
+                                <span className="text-surface-400">
+                                  {progress?.fileName || 'Downloading...'}
+                                </span>
+                                <span className="font-mono text-primary-400">
+                                  {progress
+                                    ? Math.round((progress.downloaded / progress.total) * 100)
+                                    : 0}
+                                  %
                                 </span>
                               </div>
-                              <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
+                              <div className="h-2 overflow-hidden rounded-full bg-surface-800">
                                 <div
                                   className="h-full bg-primary-500 transition-all duration-300"
-                                  style={{ width: progress ? `${Math.round((progress.downloaded / progress.total) * 100)}%` : '0%' }}
+                                  style={{
+                                    width: progress
+                                      ? `${Math.round((progress.downloaded / progress.total) * 100)}%`
+                                      : '0%',
+                                  }}
                                 />
                               </div>
                               {progress && progress.speedBps && (
@@ -242,23 +265,34 @@ export function Versions() {
                                   {progress.speedBps > 1024 * 1024
                                     ? `${(progress.speedBps / 1024 / 1024).toFixed(1)} MB/s`
                                     : `${(progress.speedBps / 1024).toFixed(1)} KB/s`}
-                                  {progress.etaSeconds ? ` • ETA: ${Math.floor(progress.etaSeconds / 60)}m ${progress.etaSeconds % 60}s` : ''}
+                                  {progress.etaSeconds
+                                    ? ` • ETA: ${Math.floor(progress.etaSeconds / 60)}m ${progress.etaSeconds % 60}s`
+                                    : ''}
                                 </p>
                               )}
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-shrink-0 items-center gap-2">
                           {isDownloaded ? (
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenFolder(version.id)} leftIcon={<FolderOpen className="w-4 h-4" />}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenFolder(version.id)}
+                              leftIcon={<FolderOpen className="h-4 w-4" />}
+                            >
                               Open
                             </Button>
                           ) : isDownloading ? (
                             <Button variant="ghost" size="sm" disabled>
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             </Button>
                           ) : (
-                            <Button size="sm" onClick={() => handleDownload(version.id)} leftIcon={<Download className="w-4 h-4" />}>
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownload(version.id)}
+                              leftIcon={<Download className="h-4 w-4" />}
+                            >
                               Download
                             </Button>
                           )}

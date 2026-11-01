@@ -42,6 +42,7 @@ pub struct DownloadTask {
     pub expected_sha1: Option<String>,
     pub file_name: String,
     pub stage: DownloadStage,
+    pub version_id: String,
 }
 
 pub struct DownloadManager {

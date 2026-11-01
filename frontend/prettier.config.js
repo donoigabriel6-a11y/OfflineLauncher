@@ -1,5 +1,5 @@
 // Prettier configuration
-module.exports = {
+export default {
   semi: true,
   singleQuote: true,
   tabWidth: 2,

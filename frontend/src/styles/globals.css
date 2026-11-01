@@ -30,7 +30,7 @@
   }
 
   body {
-    @apply bg-surface-950 text-surface-50 font-sans antialiased;
+    @apply bg-surface-950 font-sans text-surface-50 antialiased;
     background-color: var(--background);
     color: var(--foreground);
   }
@@ -42,7 +42,7 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply focus-visible:ring-ring inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
@@ -50,7 +50,7 @@
   }
 
   .btn-secondary {
-    @apply btn bg-surface-800 text-surface-100 hover:bg-surface-700 active:bg-surface-600 border border-surface-600;
+    @apply btn border border-surface-600 bg-surface-800 text-surface-100 hover:bg-surface-700 active:bg-surface-600;
   }
 
   .btn-ghost {
@@ -62,15 +62,15 @@
   }
 
   .input {
-    @apply w-full px-3 py-2 rounded-lg bg-surface-800 border border-surface-600 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+    @apply w-full rounded-lg border border-surface-600 bg-surface-800 px-3 py-2 text-surface-100 placeholder-surface-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500;
   }
 
   .light .input {
-    @apply bg-white border-surface-300 text-surface-900 placeholder-surface-400 focus:ring-primary-600;
+    @apply border-surface-300 bg-white text-surface-900 placeholder-surface-400 focus:ring-primary-600;
   }
 
   .label {
-    @apply block text-sm font-medium text-surface-300 mb-1;
+    @apply mb-1 block text-sm font-medium text-surface-300;
   }
 
   .light .label {
@@ -78,19 +78,19 @@
   }
 
   .card {
-    @apply bg-surface-900/80 border border-surface-700 rounded-xl backdrop-blur-sm;
+    @apply rounded-xl border border-surface-700 bg-surface-900/80 backdrop-blur-sm;
   }
 
   .light .card {
-    @apply bg-white/80 border-surface-200;
+    @apply border-surface-200 bg-white/80;
   }
 
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800/50 transition-all duration-200 cursor-pointer;
+    @apply flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-surface-400 transition-all duration-200 hover:bg-surface-800/50 hover:text-surface-100;
   }
 
   .light .sidebar-item {
-    @apply text-surface-600 hover:text-surface-900 hover:bg-surface-200/50;
+    @apply text-surface-600 hover:bg-surface-200/50 hover:text-surface-900;
   }
 
   .sidebar-item.active {
@@ -131,7 +131,9 @@
 
 @layer utilities {
   .animate-in {
-    animation: fadeIn 0.2s ease-out, slideUp 0.3s ease-out;
+    animation:
+      fadeIn 0.2s ease-out,
+      slideUp 0.3s ease-out;
   }
 
   .text-balance {

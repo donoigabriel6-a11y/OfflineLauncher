@@ -61,7 +61,7 @@ export function Modal({
   const modalContent = (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in"
+      className="animate-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={closeOnOverlayClick ? onClose : undefined}
       role="dialog"
       aria-modal="true"
@@ -71,13 +71,13 @@ export function Modal({
       <div
         ref={contentRef}
         className={cn(
-          'w-full bg-surface-900 border border-surface-700 rounded-xl shadow-2xl animate-in',
+          'animate-in w-full rounded-xl border border-surface-700 bg-surface-900 shadow-2xl',
           sizes[size]
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showClose) && (
-          <div className="flex items-start justify-between p-5 border-b border-surface-700">
+          <div className="flex items-start justify-between border-b border-surface-700 p-5">
             <div>
               {title && (
                 <h2 id="modal-title" className="text-lg font-semibold text-surface-100">
@@ -93,17 +93,15 @@ export function Modal({
             {showClose && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-surface-500 hover:text-surface-100 hover:bg-surface-800 transition-colors"
+                className="rounded-lg p-1 text-surface-500 transition-colors hover:bg-surface-800 hover:text-surface-100"
                 aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>
         )}
-        <div className="p-5">
-          {children}
-        </div>
+        <div className="p-5">{children}</div>
       </div>
     </div>
   );
