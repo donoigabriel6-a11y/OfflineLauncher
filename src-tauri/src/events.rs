@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use std::result::Result;
+use tauri::{AppHandle, Emitter, Error as TauriError};
 
 /// Download progress event
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,31 +122,31 @@ pub struct InstanceInfo {
 }
 
 /// Emit a download progress event
-pub fn emit_download_progress(app: &AppHandle, event: DownloadProgressEvent) -> Result<(), tauri::Error> {
+pub fn emit_download_progress(app: &AppHandle, event: DownloadProgressEvent) -> Result<(), TauriError> {
     app.emit("download_progress", &event)
 }
 
 /// Emit a download complete event
-pub fn emit_download_complete(app: &AppHandle, event: DownloadCompleteEvent) -> Result<(), tauri::Error> {
+pub fn emit_download_complete(app: &AppHandle, event: DownloadCompleteEvent) -> Result<(), TauriError> {
     app.emit("download_complete", &event)
 }
 
 /// Emit launch output
-pub fn emit_launch_output(app: &AppHandle, event: LaunchOutputEvent) -> Result<(), tauri::Error> {
+pub fn emit_launch_output(app: &AppHandle, event: LaunchOutputEvent) -> Result<(), TauriError> {
     app.emit("launch_output", &event)
 }
 
 /// Emit launch status
-pub fn emit_launch_status(app: &AppHandle, event: LaunchStatusEvent) -> Result<(), tauri::Error> {
+pub fn emit_launch_status(app: &AppHandle, event: LaunchStatusEvent) -> Result<(), TauriError> {
     app.emit("launch_status", &event)
 }
 
 /// Emit account changed
-pub fn emit_account_changed(app: &AppHandle, event: AccountChangedEvent) -> Result<(), tauri::Error> {
+pub fn emit_account_changed(app: &AppHandle, event: AccountChangedEvent) -> Result<(), TauriError> {
     app.emit("accounts_changed", &event)
 }
 
 /// Emit instance changed
-pub fn emit_instance_changed(app: &AppHandle, event: InstanceChangedEvent) -> Result<(), tauri::Error> {
+pub fn emit_instance_changed(app: &AppHandle, event: InstanceChangedEvent) -> Result<(), TauriError> {
     app.emit("instances_changed", &event)
 }

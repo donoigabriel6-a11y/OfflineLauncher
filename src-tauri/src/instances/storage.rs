@@ -10,20 +10,53 @@ use tokio::fs;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+/// Instance storage configuration
+#[derive(Debug, Clone)]
+pub struct InstanceStorageConfig {
+    pub instances_dir: PathBuf,
+}
+
+impl Default for InstanceStorageConfig {
+    fn default() -> Self {
+        Self {
+            instances_dir: get_instances_dir().expect("Failed to get instances directory"),
+        }
+    }
+}
+
+impl InstanceStorageConfig {
+    /// Create a test configuration with a temp directory
+    pub fn for_test(temp_dir: PathBuf) -> Self {
+        Self {
+            instances_dir: temp_dir.join("instances"),
+        }
+    }
+}
+
 pub struct InstanceStorage {
     instances: Arc<RwLock<HashMap<Uuid, Instance>>>,
+    config: InstanceStorageConfig,
 }
 
 impl InstanceStorage {
     pub fn new() -> Self {
+        Self::with_config(InstanceStorageConfig::default())
+    }
+
+    pub fn with_config(config: InstanceStorageConfig) -> Self {
         Self {
             instances: Arc::new(RwLock::new(HashMap::new())),
+            config,
         }
+    }
+
+    pub fn for_test(temp_dir: PathBuf) -> Self {
+        Self::with_config(InstanceStorageConfig::for_test(temp_dir))
     }
 
     /// Load instances from disk
     pub async fn load(&self) -> Result<()> {
-        let instances_dir = get_instances_dir()?;
+        let instances_dir = &self.config.instances_dir;
         if !instances_dir.exists() {
             return Ok(());
         }
@@ -54,7 +87,7 @@ impl InstanceStorage {
 
     /// Save a single instance
     async fn save_instance(&self, instance: &Instance) -> Result<()> {
-        let instances_dir = get_instances_dir()?;
+        let instances_dir = &self.config.instances_dir;
         let instance_dir = instances_dir.join(instance.id.to_string());
         fs::create_dir_all(&instance_dir).await?;
 
@@ -109,7 +142,7 @@ impl InstanceStorage {
         drop(instances);
 
         // Also delete the instance directory
-        let instances_dir = get_instances_dir()?;
+        let instances_dir = &self.config.instances_dir;
         let instance_dir = instances_dir.join(id.to_string());
         if instance_dir.exists() {
             fs::remove_dir_all(&instance_dir).await?;
@@ -176,10 +209,12 @@ impl Default for InstanceStorage {
 mod tests {
     use super::*;
     use crate::instances::model::Instance;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_instance_storage_roundtrip() {
-        let storage = InstanceStorage::new();
+        let temp_dir = tempdir().unwrap();
+        let storage = InstanceStorage::for_test(temp_dir.path().to_path_buf());
         let instance = Instance::new("Test".into(), "1.20.1".into()).unwrap();
         let id = instance.id;
 
@@ -192,7 +227,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_instance_storage_delete() {
-        let storage = InstanceStorage::new();
+        let temp_dir = tempdir().unwrap();
+        let storage = InstanceStorage::for_test(temp_dir.path().to_path_buf());
         let instance = Instance::new("ToDelete".into(), "1.20.1".into()).unwrap();
         let id = instance.id;
         storage.add(instance).await.unwrap();

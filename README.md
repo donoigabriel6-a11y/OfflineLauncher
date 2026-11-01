@@ -61,8 +61,8 @@ OfflineLauncher/
 
 ```bash
 # Clone the repository
-git clone https://github.com/offlinelauncher/offline-launcher.git
-cd offline-launcher
+git clone https://github.com/donoigabriel6-a11y/OfflineLauncher.git
+cd OfflineLauncher
 
 # Install frontend dependencies
 cd frontend
@@ -129,7 +129,7 @@ fn generate_offline_uuid(username: &str) -> Uuid {
 }
 ```
 
-Example: Username "Steve" → UUID `8667ba71-b85a-4004-af54-457a9734eed7`
+Example: Username "Steve" → UUID `8667ba71-b85a-3340-af54-457a9734eed7`
 
 ## Adding a New Account Provider
 

@@ -12,6 +12,7 @@ use tauri::AppHandle;
 use uuid::Uuid;
 
 /// Handle to a running game process
+#[derive(Clone)]
 pub struct LaunchHandle {
     pub instance_id: Uuid,
     child: Arc<Mutex<Option<Child>>>,

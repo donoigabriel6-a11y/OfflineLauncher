@@ -33,6 +33,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
     "windows": {
       "wix": {
         "language": "en-US"
@@ -55,24 +56,7 @@
     }
   },
   "plugins": {
-    "fs": {
-      "scope": {
-        "allowed": [
-          "$APPDATA/*",
-          "$HOME/*"
-        ]
-      }
-    },
-    "shell": {
-      "scope": {
-        "allowlist": [
-          {
-            "name": "java",
-            "cmd": "java",
-            "args": true
-          }
-        ]
-      }
-    }
+    "fs": {},
+    "shell": {}
   }
 }

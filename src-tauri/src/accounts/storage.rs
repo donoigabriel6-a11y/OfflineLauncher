@@ -9,6 +9,29 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+/// Account storage configuration
+#[derive(Debug, Clone)]
+pub struct AccountStorageConfig {
+    pub accounts_file: PathBuf,
+}
+
+impl Default for AccountStorageConfig {
+    fn default() -> Self {
+        Self {
+            accounts_file: get_accounts_file().expect("Failed to get accounts file path"),
+        }
+    }
+}
+
+impl AccountStorageConfig {
+    /// Create a test configuration with a temp directory
+    pub fn for_test(temp_dir: PathBuf) -> Self {
+        Self {
+            accounts_file: temp_dir.join("accounts.json"),
+        }
+    }
+}
+
 /// Serialized account data for storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -51,19 +74,31 @@ impl StoredAccount {
 /// Account storage manager
 pub struct AccountStorage {
     accounts: Arc<RwLock<HashMap<Uuid, Box<dyn Account>>>>,
+    config: AccountStorageConfig,
 }
 
 impl AccountStorage {
-    /// Create a new storage instance
+    /// Create a new storage instance with default config
     pub fn new() -> Self {
+        Self::with_config(AccountStorageConfig::default())
+    }
+
+    /// Create a new storage instance with custom config
+    pub fn with_config(config: AccountStorageConfig) -> Self {
         Self {
             accounts: Arc::new(RwLock::new(HashMap::new())),
+            config,
         }
+    }
+
+    /// Create a test storage instance with a temp directory
+    pub fn for_test(temp_dir: PathBuf) -> Self {
+        Self::with_config(AccountStorageConfig::for_test(temp_dir))
     }
 
     /// Load accounts from disk
     pub async fn load(&self) -> Result<()> {
-        let path = get_accounts_file()?;
+        let path = &self.config.accounts_file;
         if !path.exists() {
             return Ok(());
         }
@@ -98,7 +133,7 @@ impl AccountStorage {
             })
             .collect();
 
-        let path = get_accounts_file()?;
+        let path = &self.config.accounts_file;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await
                 .map_err(|e| LauncherError::Io(e))?;
@@ -107,7 +142,7 @@ impl AccountStorage {
         let content = serde_json::to_string_pretty(&stored)
             .map_err(|e| LauncherError::Serde(e))?;
 
-        tokio::fs::write(&path, content).await
+        tokio::fs::write(path, content).await
             .map_err(|e| LauncherError::Io(e))?;
         Ok(())
     }
@@ -115,13 +150,13 @@ impl AccountStorage {
     /// Get all accounts
     pub async fn list(&self) -> Vec<Box<dyn Account>> {
         let accounts = self.accounts.read().await;
-        accounts.values().map(|a| a.clone()).collect()
+        accounts.values().map(|a| a.clone_box()).collect()
     }
 
     /// Get an account by ID
     pub async fn get(&self, id: Uuid) -> Option<Box<dyn Account>> {
         let accounts = self.accounts.read().await;
-        accounts.get(&id).cloned()
+        accounts.get(&id).map(|a| a.clone_box())
     }
 
     /// Get an account by username (for offline accounts)
@@ -129,7 +164,7 @@ impl AccountStorage {
         let accounts = self.accounts.read().await;
         accounts.values()
             .find(|a| a.username().eq_ignore_ascii_case(username))
-            .cloned()
+            .map(|a| a.clone_box())
     }
 
     /// Add a new account
@@ -170,7 +205,7 @@ impl AccountStorage {
     pub async fn get_default(&self) -> Result<Box<dyn Account>> {
         let accounts = self.list().await;
         if let Some(acc) = accounts.first() {
-            Ok(acc.clone())
+            Ok(acc.clone_box())
         } else {
             // Create a default "Player" account
             let account = OfflineAccount::new("Player".into())?;
@@ -191,10 +226,12 @@ impl Default for AccountStorage {
 mod tests {
     use super::*;
     use crate::accounts::model::OfflineAccount;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_account_storage_roundtrip() {
-        let storage = AccountStorage::new();
+        let temp_dir = tempdir().unwrap();
+        let storage = AccountStorage::for_test(temp_dir.path().to_path_buf());
         let account = OfflineAccount::new("TestUser".into()).unwrap();
         let id = account.id();
 
@@ -207,7 +244,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_account_storage_list() {
-        let storage = AccountStorage::new();
+        let temp_dir = tempdir().unwrap();
+        let storage = AccountStorage::for_test(temp_dir.path().to_path_buf());
         storage.add(Box::new(OfflineAccount::new("User1".into()).unwrap())).await.unwrap();
         storage.add(Box::new(OfflineAccount::new("User2".into()).unwrap())).await.unwrap();
 
@@ -217,7 +255,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_account_storage_delete() {
-        let storage = AccountStorage::new();
+        let temp_dir = tempdir().unwrap();
+        let storage = AccountStorage::for_test(temp_dir.path().to_path_buf());
         let account = OfflineAccount::new("ToDelete".into()).unwrap();
         let id = account.id();
         storage.add(Box::new(account)).await.unwrap();

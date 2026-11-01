@@ -20,7 +20,7 @@ tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.0", features = ["v4", "serde", "v3"] }
-reqwest = { version = "0.12", features = ["json", "rustls-tls", "gzip", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip", "stream"] }
 sha1 = { version = "0.10", features = ["asm"] }
 md5 = "0.7"
 dirs = "5.0"
@@ -34,7 +34,15 @@ futures = "0.3"
 parking_lot = "0.12"
 dashmap = "5.0"
 indicatif = "0.17"
-clap = { version = "4.0", features = ["derive"] }
 toml = "0.8"
 notify = "6.0"
 walkdir = "2.0"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+debug = true

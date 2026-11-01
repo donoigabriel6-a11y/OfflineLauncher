@@ -1,10 +1,11 @@
-// Tauri build script
-use tauri_build::{BuildContext, WindowsAttributes, LinuxAttributes, MacOSAttributes};
+// Tauri 2 build script
+use tauri_build::{Attributes, WindowsAttributes};
 
 fn main() {
-    tauri_build::try_build(
-        BuildContext::new()
-            .windows_attributes(WindowsAttributes::new().app_manifest(r#"
+    tauri_build::build(
+        Attributes::new()
+            .windows_attributes(
+                WindowsAttributes::new().app_manifest(r#"
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <trustInfo>
     <security>
@@ -21,40 +22,7 @@ fn main() {
     </application>
   </compatibility>
 </assembly>
-"#))
-            .linux_attributes(LinuxAttributes::new().desktop_entry(r#"
-[Desktop Entry]
-Type=Application
-Name=OfflineLauncher
-Comment=Cross-platform Minecraft Java Edition launcher with offline account support
-Exec=offline-launcher
-Icon=offline-launcher
-Categories=Game;
-StartupNotify=true
-"#))
-            .macos_attributes(MacOSAttributes::new().info_plist(r#"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleDisplayName</key>
-    <string>OfflineLauncher</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.offlinelauncher.app</string>
-    <key>CFBundleName</key>
-    <string>OfflineLauncher</string>
-    <key>CFBundleVersion</key>
-    <string>0.1.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.15</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-</dict>
-</plist>
-"#))
+"#)
+            )
     ).expect("Failed to build Tauri app");
 }

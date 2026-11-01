@@ -44,7 +44,7 @@ pub fn build_classpath(
 }
 
 /// Get the path to a library artifact
-fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<PathBuf> {
+pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<PathBuf> {
     // Parse library name: "group:artifact:version"
     let parts: Vec<&str> = library.name.split(':').collect();
     if parts.len() != 3 {
@@ -109,7 +109,7 @@ pub async fn extract_natives(
     Ok(())
 }
 
-fn library_native_path(
+pub fn library_native_path(
     library: &Library,
     libraries_dir: &Path,
     classifier: &str,

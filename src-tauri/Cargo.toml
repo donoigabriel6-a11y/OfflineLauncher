@@ -5,7 +5,11 @@ edition = "2021"
 description = "Cross-platform Minecraft Java Edition launcher with offline account support"
 authors = ["OfflineLauncher Contributors"]
 license = "MIT"
-repository = "https://github.com/offlinelauncher/offline-launcher"
+repository = "https://github.com/donoigabriel6-a11y/OfflineLauncher"
+
+[lib]
+name = "offline_launcher_lib"
+path = "src/lib.rs"
 
 [dependencies]
 # Tauri
@@ -56,17 +60,12 @@ tracing-subscriber = { workspace = true }
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
 
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+
 [features]
 # Default features
 default = ["custom-protocol"]
 # Custom protocol for deep linking
-custom-protocol = []
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
-
-[profile.dev]
-debug = true
+custom-protocol = ["tauri/custom-protocol"]
