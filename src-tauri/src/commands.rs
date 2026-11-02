@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson,
-    DownloadTask, DownloadStage,
+    DownloadStage,
     JavaInstallation, JavaSelection,
     Instance,
     LaunchArguments, launch_game,
@@ -26,7 +26,8 @@ use crate::events::{
     InstanceChangedEvent, InstanceAction, InstanceInfo,
 };
 use crate::versions::inheritance::load_version_json;
-use crate::launch::classpath::{build_classpath, extract_natives, get_natives_dir, library_artifact_path, library_native_path};
+use crate::versions::manifest::fetch_version_manifest;
+use crate::launch::classpath::{build_classpath, extract_natives, get_natives_dir};
 use crate::java::detect_system_java;
 
 // ==================== CONFIG COMMANDS ====================
