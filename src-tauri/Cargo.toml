@@ -43,6 +43,7 @@ md5 = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true }
 semver = { workspace = true }
+shell-words = { workspace = true }
 zip = { workspace = true }
 flate2 = { workspace = true }
 tar = { workspace = true }
