@@ -1,11 +1,12 @@
 //! Download manager with concurrency control, retry, and progress reporting
 
-use crate::downloads::progress::{DownloadProgress, DownloadStage};
-use crate::downloads::hash::{verify_sha1_or_error, compute_sha1};
+use crate::downloads::progress::DownloadProgress;
+use crate::events::DownloadStage;
+use crate::downloads::hash::verify_sha1_or_error;
 use crate::error::{LauncherError, Result};
 use crate::events::emit_download_progress;
 use reqwest::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::fs::OpenOptions;
@@ -111,7 +112,7 @@ impl DownloadManager {
                     match verify_sha1_or_error(&task.destination, expected, &task.file_name).await {
                         Ok(_) => {
                             // File exists and is valid
-                            self.emit_progress(app, task, task.destination.metadata().await?.len(), task.destination.metadata().await?.len()).await;
+                            self.emit_progress(app, task, tokio::fs::metadata(&task.destination).await?.len(), task.destination.metadata().await?.len()).await;
                             return Ok(task.destination.clone());
                         }
                         Err(_) => {
@@ -131,7 +132,7 @@ impl DownloadManager {
         let temp_path = task.destination.with_extension("part");
 
         if temp_path.exists() {
-            resume_from = temp_path.metadata().await?.len();
+            resume_from = tokio::fs::metadata(&temp_path).await?.len();
         }
 
         let mut request = self.client.get(&task.url);
