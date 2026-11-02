@@ -153,7 +153,7 @@ async fn extract_native_jar(
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let name = file.name().to_string();
+        let name = file.name()?.to_string();
 
         // Skip excluded files
         let excluded = exclude_patterns.iter().any(|pattern| {
@@ -173,8 +173,8 @@ async fn extract_native_jar(
         // Only extract native libraries (dll, so, dylib)
         if name.ends_with(".dll") || name.ends_with(".so") || name.ends_with(".dylib") {
             let dest_path = natives_dir.join(Path::new(&name).file_name().unwrap());
-            let mut dest_file = tokio::fs::File::create(&dest_path).await?;
-            tokio::io::copy(&mut file, &mut dest_file).await?;
+            let mut dest_file = std::fs::File::create(&dest_path)?;
+            std::io::copy(&mut file, &mut dest_file)?;
         }
     }
 
