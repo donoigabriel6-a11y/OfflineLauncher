@@ -1,7 +1,7 @@
 //! Download progress reporting
 
 use serde::{Deserialize, Serialize};
-use crate::events::DownloadStage;
+pub use crate::events::DownloadStage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
