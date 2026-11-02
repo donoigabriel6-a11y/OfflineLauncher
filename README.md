@@ -74,6 +74,62 @@ cd ..
 cargo tauri build
 ```
 
+### Manual build on Windows
+
+You can build the launcher locally without GitHub Actions.
+
+**Install these prerequisites first:**
+
+1. Git for Windows.
+2. Node.js 20 LTS (includes npm).
+3. Rust stable with the MSVC toolchain. Install Visual Studio Build Tools with **Desktop development with C++** (MSVC and the Windows SDK).
+4. WebView2 Runtime (normally already installed on Windows 10/11).
+5. The Tauri CLI:
+   ```powershell
+   cargo install tauri-cli --version "^2" --locked
+   ```
+
+**Clone and build:**
+
+Open PowerShell in the folder where you want the source:
+
+```powershell
+git clone https://github.com/donoigabriel6-a11y/OfflineLauncher.git
+cd OfflineLauncher
+
+# Install frontend packages
+cd frontend
+npm ci
+cd ..
+
+# Check and compile the Rust workspace
+cargo check --workspace
+cargo test --workspace
+
+# Build the Windows installer/bundle
+cargo tauri build
+```
+
+The Tauri configuration runs the frontend production build automatically. Build artifacts are written under `src-tauri/target/release/bundle/` (for example, the Windows installer under `msi/` or `nsis/`, depending on enabled bundle targets).
+
+**Run in development mode instead:**
+
+```powershell
+cd frontend
+npm ci
+cd ..
+cargo tauri dev
+```
+
+If you only want to verify Rust compilation before making a full installer, run `cargo check --workspace`. If you want strict lint checking, run:
+
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+On Linux or macOS, install the platform-specific Tauri system prerequisites before running the same Cargo commands. See the [official Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/).
+
 ### Development
 
 ```bash
