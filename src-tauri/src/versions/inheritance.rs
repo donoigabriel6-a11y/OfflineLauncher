@@ -139,7 +139,7 @@ pub async fn load_version_json(version_id: &str, versions_dir: &Path) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Library};
+    use crate::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments};
 
     fn create_test_version(id: &str, inherits: Option<&str>, main_class: &str) -> VersionJson {
         VersionJson {
