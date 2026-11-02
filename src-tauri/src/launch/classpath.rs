@@ -1,9 +1,10 @@
 //! Classpath construction for Minecraft launch
 
-use crate::app_dirs::{get_libraries_dir, get_version_dir};
 use crate::versions::model::{VersionJson, Library};
 use crate::error::{LauncherError, Result};
 use std::path::{Path, PathBuf};
+use std::io::Cursor;
+use zip::ZipArchive;
 
 /// Build the complete classpath for launching Minecraft
 pub fn build_classpath(
@@ -79,8 +80,6 @@ pub async fn extract_natives(
     natives_dir: &Path,
 ) -> Result<()> {
     use tokio::fs;
-    use zip::ZipArchive;
-    use std::io::Cursor;
 
     fs::create_dir_all(natives_dir).await?;
 
@@ -185,7 +184,7 @@ async fn extract_native_jar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::versions::model::{Library, LibraryDownloads, DownloadInfo};
+    use crate::versions::model::Library;
     use std::path::PathBuf;
 
     #[test]
