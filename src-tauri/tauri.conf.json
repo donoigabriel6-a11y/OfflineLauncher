@@ -23,7 +23,7 @@
         "transparent": false
       }
     ],
-    "macOS": {
+    "macos": {
       "minimumSystemVersion": "10.15"
     },
     "security": {
@@ -33,13 +33,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
+    "icon": ["icons/icon.png"],
     "windows": {
       "wix": {
         "language": "en-US"
       }
     },
-    "macOS": {
+    "macos": {
       "entitlements": null,
       "exceptionDomain": "",
       "frameworks": [],
@@ -50,9 +50,7 @@
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "librsvg2-common"]
       },
-      "appimage": {
-        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "librsvg2-common"]
-      }
+      "appimage": {}
     }
   },
   "plugins": {

@@ -50,5 +50,3 @@ tmp/
 
 # Tauri specific
 **/.tauri/
-**/icons/
-!**/icons/.gitkeep
