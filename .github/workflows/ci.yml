@@ -218,6 +218,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve patched ZIP dependency
+        run: cargo update -p zip
+
       - name: Run security audit
         uses: rustsec/audit-check@v2
         with:
@@ -232,6 +238,9 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve patched ZIP dependency
+        run: cargo update -p zip
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
