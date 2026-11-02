@@ -2,9 +2,10 @@
 
 use crate::app_dirs::get_java_runtimes_dir;
 use crate::error::{LauncherError, Result};
-use crate::java::detection::{detect_system_java, find_java_for_version, JavaInstallation};
+use crate::java::detection::{detect_system_java, find_java_for_version};
 use crate::java::runtime::{fetch_adoptium_runtimes, fetch_java_runtimes, JavaRuntime};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
