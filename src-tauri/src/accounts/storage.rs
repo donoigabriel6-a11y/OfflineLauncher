@@ -1,4 +1,4 @@
-use crate::accounts::model::{Account, OfflineAccount, AccountType, UserType};
+use crate::accounts::model::{Account, OfflineAccount};
 use crate::app_dirs::get_accounts_file;
 use crate::error::{LauncherError, Result};
 use chrono::{DateTime, Utc};
