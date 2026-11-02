@@ -237,7 +237,8 @@ pub async fn versions_download(
     let mut download_tasks = Vec::new();
 
     // 1. Client jar
-    if let Some(client_download) = &version_json.downloads.client {
+    {
+        let client_download = &version_json.downloads.client;
         let client_jar_path = version_dir.join(format!("{}.jar", version_id));
         download_tasks.push(crate::downloads::DownloadTask {
             url: client_download.url.clone(),
