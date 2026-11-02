@@ -106,7 +106,7 @@ impl GameProcess {
         })?;
 
         // Spawn process
-        let mut child = cmd.spawn()
+        let child = cmd.spawn()
             .map_err(|e| LauncherError::Process(format!("Failed to spawn process: {}", e)))?;
 
         let pid = child.id();
@@ -183,7 +183,6 @@ pub async fn launch_game(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn test_launch_handle_creation() {
