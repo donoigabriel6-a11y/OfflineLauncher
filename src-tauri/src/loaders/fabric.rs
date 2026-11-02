@@ -73,9 +73,7 @@ pub async fn fetch_fabric_versions(client: &Client) -> Result<Vec<FabricVersion>
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch Fabric versions: {}", response.status()).into()
-        ));
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric versions: {}", response.status())));
     }
 
     let versions: Vec<FabricVersion> = response.json().await
@@ -91,9 +89,7 @@ pub async fn fetch_fabric_loader_versions(client: &Client) -> Result<Vec<FabricL
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch Fabric loader versions: {}", response.status()).into()
-        ));
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric loader versions: {}", response.status())));
     }
 
     let versions: Vec<FabricLoaderVersion> = response.json().await
@@ -107,7 +103,7 @@ pub async fn install_fabric(
     client: &Client,
     minecraft_version: &str,
     loader_version: &str,
-    install_dir: &Path,
+    _install_dir: &Path,
 ) -> Result<FabricInstallerProfile> {
     let url = format!(
         "{}/versions/loader/{}/{}/profile/json",
