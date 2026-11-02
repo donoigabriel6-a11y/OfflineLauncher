@@ -24,7 +24,7 @@ pub async fn resolve_inheritance(
     visited.push(version_json.id.clone());
 
     // If no inheritance, return as-is
-    let Some(parent_id) = version_json.inherits_from else {
+    let Some(parent_id) = version_json.inherits_from.clone() else {
         return Ok(version_json);
     };
 
@@ -90,7 +90,7 @@ fn merge_version_json(mut parent: VersionJson, child: VersionJson) -> VersionJso
 }
 
 /// Merge libraries: child libraries with same name replace parent libraries
-fn merge_libraries(mut parent: Vec<crate::versions::model::Library>, child: Vec<crate::versions::model::Library>) -> Vec<crate::versions::model::Library> {
+fn merge_libraries(parent: Vec<crate::versions::model::Library>, child: Vec<crate::versions::model::Library>) -> Vec<crate::versions::model::Library> {
     let mut map: HashMap<String, crate::versions::model::Library> = parent.into_iter()
         .map(|lib| (lib.name.clone(), lib))
         .collect();
@@ -140,7 +140,6 @@ pub async fn load_version_json(version_id: &str, versions_dir: &Path) -> Result<
 mod tests {
     use super::*;
     use crate::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Library};
-    use std::path::PathBuf;
 
     fn create_test_version(id: &str, inherits: Option<&str>, main_class: &str) -> VersionJson {
         VersionJson {
