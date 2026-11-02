@@ -8,10 +8,10 @@ use reqwest::Client;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::fs::{File, OpenOptions};
-use tokio::io::{AsyncWriteExt, AsyncSeekExt};
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
-use tokio::time::{Duration, timeout};
+use tokio::time::Duration;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone)]
@@ -148,14 +148,26 @@ impl DownloadManager {
             ));
         }
 
-        let total_size = response.content_length().unwrap_or(0);
-        let total = if resume_from > 0 { total_size + resume_from } else { total_size };
+        // Resume only when the server honored the Range request. Some servers
+        // ignore Range and return 200 with the entire file; appending that body
+        // would corrupt the partial download.
+        let resumed = resume_from > 0
+            && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+        if !resumed {
+            resume_from = 0;
+        }
 
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&temp_path)
-            .await
+        let total_size = response.content_length().unwrap_or(0);
+        let total = if resumed { total_size + resume_from } else { total_size };
+
+        let mut options = OpenOptions::new();
+        options.create(true).write(true);
+        if resumed {
+            options.append(true);
+        } else {
+            options.truncate(true);
+        }
+        let mut file = options.open(&temp_path).await
             .map_err(|e| LauncherError::Io(e))?;
 
         let mut downloaded = resume_from;
