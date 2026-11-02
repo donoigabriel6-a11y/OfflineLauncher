@@ -61,7 +61,6 @@ pub async fn detect_system_java() -> Result<Vec<JavaInstallation>> {
                 }
             }
         }
-    }
 
     // Sort by version (newest first)
     installations.sort_by(|a, b| b.major_version.cmp(&a.major_version).then_with(|| b.version.cmp(&a.version)));
