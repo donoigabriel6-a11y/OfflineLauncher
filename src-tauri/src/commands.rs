@@ -33,13 +33,13 @@ use crate::java::detect_system_java;
 // ==================== CONFIG COMMANDS ====================
 
 #[tauri::command]
-async fn config_get(state: State<'_, Arc<AppState>>) -> Result<Config> {
+pub async fn config_get(state: State<'_, Arc<AppState>>) -> Result<Config> {
     let config = state.config.read().await;
     Ok(config.clone())
 }
 
 #[tauri::command]
-async fn config_set(state: State<'_, Arc<AppState>>, config: Config) -> Result<()> {
+pub async fn config_set(state: State<'_, Arc<AppState>>, config: Config) -> Result<()> {
     config.save()?;
     let mut state_config = state.config.write().await;
     *state_config = config;
@@ -47,14 +47,14 @@ async fn config_set(state: State<'_, Arc<AppState>>, config: Config) -> Result<(
 }
 
 #[tauri::command]
-async fn config_open_data_dir() -> Result<PathBuf> {
+pub async fn config_open_data_dir() -> Result<PathBuf> {
     Ok(get_app_data_dir()?)
 }
 
 // ==================== ACCOUNT COMMANDS ====================
 
 #[tauri::command]
-async fn accounts_list(state: State<'_, Arc<AppState>>) -> Result<Vec<OfflineAccount>> {
+pub async fn accounts_list(state: State<'_, Arc<AppState>>) -> Result<Vec<OfflineAccount>> {
     let accounts = state.account_storage.list().await;
     let mut result = Vec::new();
     for acc in accounts {
@@ -66,7 +66,7 @@ async fn accounts_list(state: State<'_, Arc<AppState>>) -> Result<Vec<OfflineAcc
 }
 
 #[tauri::command]
-async fn accounts_create(
+pub async fn accounts_create(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     username: String,
@@ -97,7 +97,7 @@ async fn accounts_create(
 }
 
 #[tauri::command]
-async fn accounts_update(
+pub async fn accounts_update(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     id: String,
@@ -139,7 +139,7 @@ async fn accounts_update(
 }
 
 #[tauri::command]
-async fn accounts_delete(
+pub async fn accounts_delete(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     id: String,
@@ -167,7 +167,7 @@ async fn accounts_delete(
 }
 
 #[tauri::command]
-async fn accounts_generate_uuid(username: String) -> Result<String> {
+pub async fn accounts_generate_uuid(username: String) -> Result<String> {
     validate_username(&username)?;
     let uuid = generate_offline_uuid(&username);
     Ok(uuid.to_string())
@@ -176,12 +176,12 @@ async fn accounts_generate_uuid(username: String) -> Result<String> {
 // ==================== VERSION COMMANDS ====================
 
 #[tauri::command]
-async fn versions_fetch_manifest(state: State<'_, Arc<AppState>>) -> Result<VersionManifest> {
+pub async fn versions_fetch_manifest(state: State<'_, Arc<AppState>>) -> Result<VersionManifest> {
     fetch_version_manifest(&state.http_client).await
 }
 
 #[tauri::command]
-async fn versions_list(
+pub async fn versions_list(
     state: State<'_, Arc<AppState>>,
     version_type: Option<String>,
 ) -> Result<Vec<VersionEntry>> {
@@ -199,7 +199,7 @@ async fn versions_list(
 }
 
 #[tauri::command]
-async fn versions_download(
+pub async fn versions_download(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     version_id: String,
@@ -326,7 +326,7 @@ async fn versions_download(
 }
 
 #[tauri::command]
-async fn versions_get_version_json(version_id: String) -> Result<VersionJson> {
+pub async fn versions_get_version_json(version_id: String) -> Result<VersionJson> {
     let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
     load_version_json(&version_id, &version_dir).await
 }
@@ -334,17 +334,17 @@ async fn versions_get_version_json(version_id: String) -> Result<VersionJson> {
 // ==================== JAVA COMMANDS ====================
 
 #[tauri::command]
-async fn java_detect() -> Result<Vec<JavaInstallation>> {
+pub async fn java_detect() -> Result<Vec<JavaInstallation>> {
     detect_system_java().await
 }
 
 #[tauri::command]
-async fn java_list_runtimes(state: State<'_, Arc<AppState>>) -> Result<Vec<JavaSelection>> {
+pub async fn java_list_runtimes(state: State<'_, Arc<AppState>>) -> Result<Vec<JavaSelection>> {
     state.java_manager.list_all().await
 }
 
 #[tauri::command]
-async fn java_resolve(
+pub async fn java_resolve(
     state: State<'_, Arc<AppState>>,
     required_major: u8,
     override_path: Option<PathBuf>,
@@ -355,12 +355,12 @@ async fn java_resolve(
 // ==================== INSTANCE COMMANDS ====================
 
 #[tauri::command]
-async fn instances_list(state: State<'_, Arc<AppState>>) -> Result<Vec<Instance>> {
+pub async fn instances_list(state: State<'_, Arc<AppState>>) -> Result<Vec<Instance>> {
     Ok(state.instance_storage.list().await)
 }
 
 #[tauri::command]
-async fn instances_create(
+pub async fn instances_create(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     name: String,
@@ -384,7 +384,7 @@ async fn instances_create(
 }
 
 #[tauri::command]
-async fn instances_update(
+pub async fn instances_update(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     instance: Instance,
@@ -406,7 +406,7 @@ async fn instances_update(
 }
 
 #[tauri::command]
-async fn instances_delete(
+pub async fn instances_delete(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     id: String,
@@ -433,7 +433,7 @@ async fn instances_delete(
 }
 
 #[tauri::command]
-async fn instances_clone(
+pub async fn instances_clone(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     id: String,
@@ -456,7 +456,7 @@ async fn instances_clone(
 }
 
 #[tauri::command]
-async fn instances_open_folder(
+pub async fn instances_open_folder(
     state: State<'_, Arc<AppState>>,
     id: String,
 ) -> Result<()> {
@@ -467,7 +467,7 @@ async fn instances_open_folder(
 // ==================== LAUNCH COMMANDS ====================
 
 #[tauri::command]
-async fn launch_start(
+pub async fn launch_start(
     state: State<'_, Arc<AppState>>,
     app: AppHandle,
     instance_id: String,
@@ -568,7 +568,7 @@ async fn launch_start(
 }
 
 #[tauri::command]
-async fn launch_kill(
+pub async fn launch_kill(
     state: State<'_, Arc<AppState>>,
     instance_id: String,
 ) -> Result<()> {
@@ -589,21 +589,21 @@ async fn launch_kill(
 // ==================== LOADER COMMANDS ====================
 
 #[tauri::command]
-async fn loaders_fabric_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricVersion>> {
+pub async fn loaders_fabric_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricVersion>> {
     fetch_fabric_versions(&state.http_client).await
 }
 
 #[tauri::command]
-async fn loaders_fabric_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricLoaderVersion>> {
+pub async fn loaders_fabric_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricLoaderVersion>> {
     fetch_fabric_loader_versions(&state.http_client).await
 }
 
 #[tauri::command]
-async fn loaders_quilt_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltVersion>> {
+pub async fn loaders_quilt_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltVersion>> {
     fetch_quilt_versions(&state.http_client).await
 }
 
 #[tauri::command]
-async fn loaders_quilt_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltLoaderVersion>> {
+pub async fn loaders_quilt_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltLoaderVersion>> {
     fetch_quilt_loader_versions(&state.http_client).await
 }
