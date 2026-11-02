@@ -60,12 +60,15 @@ pub async fn fetch_java_runtimes(client: &Client) -> Result<Vec<JavaRuntime>> {
             continue;
         }
 
-        let component = parts[0];
         let os_arch = parts[1];
         let version_str = parts[2];
 
-        let (os, arch) = parse_os_arch(os_arch)?;
-        let major_version = parse_java_major_version(version_str)?;
+        let Some((os, arch)) = parse_os_arch(os_arch) else {
+            continue;
+        };
+        let Some(major_version) = parse_java_major_version(version_str) else {
+            continue;
+        };
 
         // Only include current platform
         if os != current_os() || arch != current_arch() {
