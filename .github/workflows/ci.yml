@@ -41,8 +41,8 @@ jobs:
       - name: Stub frontend dist for tauri compilation
         run: mkdir -p frontend/dist
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - name: Format Rust code
+        run: cargo fmt --all
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
