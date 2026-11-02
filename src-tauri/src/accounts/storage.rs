@@ -210,7 +210,7 @@ impl AccountStorage {
             // Create a default "Player" account
             let account = OfflineAccount::new("Player".into())?;
             let id = account.id();
-            self.add(account).await?;
+            self.add(Box::new(account)).await?;
             self.get(id).await.ok_or(LauncherError::AccountNotFound("default".into()))
         }
     }
