@@ -110,7 +110,7 @@ cargo test --workspace
 cargo tauri build
 ```
 
-The Tauri configuration runs the frontend production build automatically. Build artifacts are written under `src-tauri/target/release/bundle/` (for example, the Windows installer under `msi/` or `nsis/`, depending on enabled bundle targets).
+The Tauri configuration runs the frontend production build automatically. Build artifacts are written under `target/release/bundle/` (or `src-tauri/target/release/bundle/` if Cargo is configured to use a crate-local target directory) (for example, the Windows installer under `msi/` or `nsis/`, depending on enabled bundle targets).
 
 **Run in development mode instead:**
 
