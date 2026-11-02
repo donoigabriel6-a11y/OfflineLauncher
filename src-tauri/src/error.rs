@@ -14,6 +14,12 @@ pub enum LauncherError {
     #[error("UUID error: {0}")]
     Uuid(#[from] uuid::Error),
 
+    #[error("Tauri error: {0}")]
+    Tauri(#[from] tauri::Error),
+
+    #[error("ZIP archive error: {0}")]
+    Zip(#[from] zip::result::ZipError),
+
     #[error("SHA1 verification failed for {file}: expected {expected}, got {actual}")]
     HashMismatch { file: String, expected: String, actual: String },
 
