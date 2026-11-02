@@ -43,9 +43,7 @@ pub async fn fetch_java_runtimes(client: &Client) -> Result<Vec<JavaRuntime>> {
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch Java manifest: {}", response.status()).into()
-        ));
+        return Err(LauncherError::Download(format!("Failed to fetch Java manifest: {}", response.status())));
     }
 
     let manifest: JavaRuntimeManifest = response.json().await
