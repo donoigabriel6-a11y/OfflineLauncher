@@ -99,7 +99,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            initialize_app(app)?;
+            initialize_app(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
