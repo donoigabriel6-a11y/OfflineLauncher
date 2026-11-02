@@ -1,7 +1,7 @@
 //! Library rules evaluation for OS/arch filtering
 
-use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
-use crate::error::{LauncherError, Result};
+use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOsName};
+use crate::error::Result;
 
 /// Evaluate library rules for the current platform
 pub fn evaluate_library_rules(rules: &[LibraryRule]) -> Result<bool> {
