@@ -112,7 +112,7 @@ impl DownloadManager {
                     match verify_sha1_or_error(&task.destination, expected, &task.file_name).await {
                         Ok(_) => {
                             // File exists and is valid
-                            self.emit_progress(app, task, tokio::fs::metadata(&task.destination).await?.len(), task.destination.metadata().await?.len()).await;
+                            self.emit_progress(app, task, tokio::fs::metadata(&task.destination).await?.len(), tokio::fs::metadata(&task.destination).await?.len()).await;
                             return Ok(task.destination.clone());
                         }
                         Err(_) => {
