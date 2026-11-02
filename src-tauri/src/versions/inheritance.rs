@@ -57,7 +57,7 @@ fn merge_version_json(mut parent: VersionJson, child: VersionJson) -> VersionJso
     if !child.id.is_empty() {
         parent.id = child.id;
     }
-    if let Some(inherits) = child.inherits_from {
+    if let Some(inherits) = child.inherits_from.clone() {
         parent.inherits_from = Some(inherits);
     }
     parent.java_version = child.java_version;
