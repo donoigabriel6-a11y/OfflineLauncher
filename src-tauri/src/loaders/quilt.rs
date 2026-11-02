@@ -73,9 +73,7 @@ pub async fn fetch_quilt_versions(client: &Client) -> Result<Vec<QuiltVersion>> 
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch Quilt versions: {}", response.status()).into()
-        ));
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt versions: {}", response.status())));
     }
 
     let versions: Vec<QuiltVersion> = response.json().await
@@ -91,9 +89,7 @@ pub async fn fetch_quilt_loader_versions(client: &Client) -> Result<Vec<QuiltLoa
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch Quilt loader versions: {}", response.status()).into()
-        ));
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt loader versions: {}", response.status())));
     }
 
     let versions: Vec<QuiltLoaderVersion> = response.json().await
@@ -107,7 +103,7 @@ pub async fn install_quilt(
     client: &Client,
     minecraft_version: &str,
     loader_version: &str,
-    install_dir: &Path,
+    _install_dir: &Path,
 ) -> Result<QuiltInstallerProfile> {
     let url = format!(
         "{}/versions/loader/{}/{}/profile/json",
