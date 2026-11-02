@@ -153,7 +153,7 @@ async fn extract_native_jar(
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let name = file.name()?.to_string();
+        let name = file.name().to_string();
 
         // Skip excluded files
         let excluded = exclude_patterns.iter().any(|pattern| {
