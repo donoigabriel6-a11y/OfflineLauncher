@@ -19,10 +19,11 @@ pub mod loaders;
 
 mod commands;
 
-use tauri::{Manager, State};
+use tauri::Manager;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use uuid::Uuid;
 
 // Re-export commonly used types
 pub use error::{LauncherError, Result};
