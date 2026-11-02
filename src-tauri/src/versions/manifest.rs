@@ -17,9 +17,7 @@ pub async fn fetch_version_manifest(client: &Client) -> Result<VersionManifest> 
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Http(
-            format!("Failed to fetch manifest: {}", response.status()).into()
-        ));
+        return Err(LauncherError::Download(format!("Failed to fetch manifest: {}", response.status())));
     }
 
     let manifest: VersionManifest = response.json().await
