@@ -99,9 +99,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            if let Err(e) = initialize_app(app) {
-                eprintln!("Failed to initialize app: {}", e);
-            }
+            initialize_app(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
