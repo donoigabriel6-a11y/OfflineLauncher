@@ -1,18 +1,18 @@
 //! Tauri commands module
 
-use tauri::{State, AppHandle, Emitter};
+use tauri::{State, AppHandle};
 use std::sync::Arc;
 use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::{
-    AppState, Config, OfflineAccount, AccountStorage, VersionManifest, VersionEntry, VersionJson,
+    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson,
     DownloadTask, DownloadStage,
-    JavaManager, JavaInstallation, JavaSelection,
-    InstanceStorage, Instance,
+    JavaInstallation, JavaSelection,
+    Instance,
     LaunchArguments, launch_game,
-    fetch_fabric_versions, fetch_fabric_loader_versions, install_fabric,
-    fetch_quilt_versions, fetch_quilt_loader_versions, install_quilt,
+    fetch_fabric_versions, fetch_fabric_loader_versions,
+    fetch_quilt_versions, fetch_quilt_loader_versions,
     Result, LauncherError,
 };
 use crate::accounts::model::validate_username;
@@ -25,7 +25,6 @@ use crate::events::{
     AccountChangedEvent, AccountAction, AccountInfo,
     InstanceChangedEvent, InstanceAction, InstanceInfo,
 };
-use crate::versions::library::get_native_classifier;
 use crate::versions::inheritance::load_version_json;
 use crate::launch::classpath::{build_classpath, extract_natives, get_natives_dir, library_artifact_path, library_native_path};
 use crate::java::detect_system_java;
@@ -117,7 +116,7 @@ pub async fn accounts_update(
         account.set_skin_path(Some(PathBuf::from(skin_path))).await?;
     }
 
-    let account_clone = account.clone();
+    let account_clone = account.clone_box();
     state.account_storage.update(account).await?;
 
     // Emit event
