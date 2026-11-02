@@ -82,7 +82,7 @@ impl GameProcess {
         game_args: Vec<String>,
         working_dir: &Path,
     ) -> Result<Self> {
-        let handle = LaunchHandle::new(instance_id);
+        let mut handle = LaunchHandle::new(instance_id);
 
         // Build command
         let mut cmd = Command::new(java_exe);
@@ -183,8 +183,6 @@ pub async fn launch_game(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
     #[test]
     fn test_launch_handle_creation() {
         let id = Uuid::new_v4();
