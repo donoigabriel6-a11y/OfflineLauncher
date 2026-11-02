@@ -1,4 +1,4 @@
-![OfflineLauncherCover](covers/Cover.jpg)
+[OfflineLauncherCover](covers/Cover.jpg)
 # OfflineLauncher
 
 A cross-platform Minecraft Java Edition launcher with first-class offline account support, built with Tauri 2, React, TypeScript, and Rust.
