@@ -30,9 +30,9 @@ impl LaunchHandle {
     }
 
     /// Set the child process
-    pub fn set_child(&self, child: Child) {
+    pub async fn set_child(&mut self, child: Child) {
         self.pid = child.id();
-        let mut guard = self.child.blocking_lock();
+        let mut guard = self.child.lock().await;
         *guard = Some(child);
     }
 
@@ -82,7 +82,7 @@ impl GameProcess {
         game_args: Vec<String>,
         working_dir: &Path,
     ) -> Result<Self> {
-        let handle = LaunchHandle::new(instance_id);
+        let mut handle = LaunchHandle::new(instance_id);
 
         // Build command
         let mut cmd = Command::new(java_exe);
@@ -110,7 +110,7 @@ impl GameProcess {
             .map_err(|e| LauncherError::Process(format!("Failed to spawn process: {}", e)))?;
 
         let pid = child.id();
-        handle.set_child(child);
+        handle.set_child(child).await;
 
         // Emit running status
         emit_launch_status(&app, LaunchStatusEvent {
