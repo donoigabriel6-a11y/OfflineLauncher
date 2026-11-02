@@ -1,7 +1,7 @@
 //! Instance (profile) data model
 
 use crate::app_dirs::get_instance_game_dir;
-use crate::error::{LauncherError, Result};
+use crate::error::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
