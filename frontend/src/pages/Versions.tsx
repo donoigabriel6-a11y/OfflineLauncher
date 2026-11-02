@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useStore } from '@/store/useStore';
+import type { VersionFilter } from '@/store/useStore';
 import { useToast } from '@/components/ui/Toaster';
 import { versionsApi } from '@/services/api';
 import { eventManager } from '@/services/events';
@@ -169,7 +170,7 @@ export function Versions() {
                     { value: 'old_alpha', label: 'Old Alpha' },
                   ]}
                   value={versionFilter}
-                  onChange={(e) => setVersionFilter(e.target.value as any)}
+                  onChange={(e) => setVersionFilter(e.target.value as VersionFilter)}
                   className="w-40"
                 />
               </div>

@@ -410,7 +410,7 @@ export function Instances() {
                   { value: 'quilt', label: 'Quilt' },
                 ]}
                 value={editLoader}
-                onChange={(e) => setEditLoader(e.target.value as any)}
+                onChange={(e) => setEditLoader(e.target.value as ModLoader)}
               />
               <Input
                 label="Loader Version (optional)"

@@ -82,7 +82,7 @@ export function Home() {
     };
 
     loadData();
-  }, []);
+  }, [selectedInstanceId, selectedAccountId, setIsLoading, setError, setSelectedInstanceId, setSelectedAccountId, toast]);
 
   // Listen for launch events
   useEffect(() => {

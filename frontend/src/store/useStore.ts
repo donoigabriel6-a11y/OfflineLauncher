@@ -12,6 +12,8 @@ import type {
   LaunchStatus,
 } from '@/types';
 
+export type VersionFilter = 'all' | VersionEntry['type'];
+
 interface AppState {
   // Theme
   theme: 'dark' | 'light' | 'system';
@@ -47,8 +49,8 @@ interface AppState {
   // Versions
   versions: VersionEntry[];
   setVersions: (versions: VersionEntry[]) => void;
-  versionFilter: 'all' | 'release' | 'snapshot' | 'old_beta' | 'old_alpha';
-  setVersionFilter: (filter: VersionEntry['type']) => void;
+  versionFilter: VersionFilter;
+  setVersionFilter: (filter: VersionFilter) => void;
   selectedVersionId: string | null;
   setSelectedVersionId: (id: string | null) => void;
 

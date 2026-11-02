@@ -161,8 +161,9 @@ export function Settings() {
                   ]}
                   value={localConfig.theme || config?.theme || 'dark'}
                   onChange={(e) => {
-                    setLocalConfig((prev) => ({ ...prev, theme: e.target.value as any }));
-                    setTheme(e.target.value as any);
+                    const theme = e.target.value as Config['theme'];
+                    setLocalConfig((prev) => ({ ...prev, theme }));
+                    setTheme(theme);
                   }}
                 />
                 <Select

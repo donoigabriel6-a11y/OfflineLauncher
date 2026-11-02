@@ -1,5 +1,6 @@
 // Tauri event listeners
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
+import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { DownloadProgress, LaunchOutput, LaunchStatus } from '@/types';
 
 type DownloadProgressCallback = (progress: DownloadProgress) => void;
