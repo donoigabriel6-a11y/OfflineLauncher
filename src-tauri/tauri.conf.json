@@ -23,9 +23,6 @@
         "transparent": false
       }
     ],
-    "macos": {
-      "minimumSystemVersion": "10.15"
-    },
     "security": {
       "csp": null
     }
@@ -40,10 +37,7 @@
       }
     },
     "macos": {
-      "entitlements": null,
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": "",
+      "minimumSystemVersion": "10.15",
       "signingIdentity": null
     },
     "linux": {
