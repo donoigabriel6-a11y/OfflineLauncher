@@ -43,7 +43,7 @@ pub async fn resolve_inheritance(
         .map_err(|e| LauncherError::Serde(e))?;
 
     // Recursively resolve parent's inheritance
-    parent_json = resolve_inheritance(parent_json, versions_dir, visited).await?;
+    parent_json = Box::pin(resolve_inheritance(parent_json, versions_dir, visited)).await?;
 
     // Merge child into parent (child overrides parent)
     let merged = merge_version_json(parent_json, version_json);
