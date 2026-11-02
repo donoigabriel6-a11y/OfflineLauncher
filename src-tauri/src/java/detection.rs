@@ -48,10 +48,8 @@ pub async fn detect_system_java() -> Result<Vec<JavaInstallation>> {
     // Check common install directories
     for dir in common_java_dirs() {
         if let Ok(entries) = tokio::fs::read_dir(&dir).await {
-            use futures::StreamExt;
             let mut entries = entries;
-            while let Some(entry) = entries.next().await {
-                if let Ok(entry) = entry {
+            while let Ok(Some(entry)) = entries.next_entry().await {
                     let java_exe = entry.path().join("bin").join(java_executable_name());
                     if java_exe.exists() {
                         if let Ok(install) = parse_java_version(&java_exe).await {
@@ -71,7 +69,7 @@ pub async fn detect_system_java() -> Result<Vec<JavaInstallation>> {
     Ok(installations)
 }
 
-fn java_executable_name() -> &'static str {
+pub(crate) fn java_executable_name() -> &'static str {
     #[cfg(target_os = "windows")]
     return "java.exe";
     #[cfg(not(target_os = "windows"))]
@@ -112,7 +110,7 @@ fn common_java_dirs() -> Vec<PathBuf> {
     dirs
 }
 
-async fn parse_java_version(java_exe: &Path) -> Result<JavaInstallation> {
+pub(crate) async fn parse_java_version(java_exe: &Path) -> Result<JavaInstallation> {
     let output = Command::new(java_exe)
         .arg("-version")
         .output()
