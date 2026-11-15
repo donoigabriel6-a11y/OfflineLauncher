@@ -35,7 +35,6 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "subsystem": "gui",
       "wix": {
         "language": "en-US"
       }
