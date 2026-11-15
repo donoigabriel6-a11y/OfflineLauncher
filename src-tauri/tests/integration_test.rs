@@ -6,7 +6,6 @@ use offline_launcher_lib::{
     versions::inheritance::load_version_json,
     launch::classpath::build_classpath,
 };
-use std::path::PathBuf;
 
 #[tokio::test]
 async fn test_download_version_manifest() {
