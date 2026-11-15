@@ -56,16 +56,22 @@ fn test_offline_account_uuid_format() {
 
 #[test]
 fn test_known_username_steve() {
-    // Verified against vanilla Minecraft offline mode
+    // Offline UUID = MD5("OfflinePlayer:<username>") with version=3, variant=RFC4122
+    // Steve -> MD5("OfflinePlayer:Steve") = 5627dd98e6bebc21f8a8e92344183641
+    // With version=3 (byte 6: bc->3c), variant=RFC4122 (byte 8: f8->b8)
+    // = 5627dd98-e6be-3c21-b8a8-e92344183641
     let account = OfflineAccount::new("Steve".into()).unwrap();
-    let expected = Uuid::parse_str("8667ba71-b85a-3340-af54-457a9734eed7").unwrap();
+    let expected = Uuid::parse_str("5627dd98-e6be-3c21-b8a8-e92344183641").unwrap();
     assert_eq!(account.uuid(), expected);
 }
 
 #[test]
 fn test_known_username_alex() {
+    // Alex -> MD5("OfflinePlayer:Alex") = 36532b5ec442edbb224cc7e55d0f979a
+    // With version=3 (byte 6: ed->3d), variant=RFC4122 (byte 8: 22->a2)
+    // = 36532b5e-c442-3dbb-a24c-c7e55d0f979a
     let account = OfflineAccount::new("Alex".into()).unwrap();
-    let expected = Uuid::parse_str("e70671d5-6c79-3d23-8e76-447a2d8d3b5c").unwrap();
+    let expected = Uuid::parse_str("36532b5e-c442-3dbb-a24c-c7e55d0f979a").unwrap();
     assert_eq!(account.uuid(), expected);
 }
 
