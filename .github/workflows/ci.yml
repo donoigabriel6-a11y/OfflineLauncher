@@ -102,6 +102,14 @@ jobs:
           projectPath: src-tauri
           args: --target x86_64-pc-windows-msvc
 
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+
   # Build on macOS
   build-macos:
     name: Build macOS
@@ -139,6 +147,14 @@ jobs:
         with:
           projectPath: src-tauri
           args: --target x86_64-apple-darwin
+
+      - name: Upload macOS installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installers
+          path: |
+            target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            target/x86_64-apple-darwin/release/bundle/macos/*.app
 
   # Build on Linux
   build-linux:
@@ -181,6 +197,15 @@ jobs:
         with:
           projectPath: src-tauri
           args: --target x86_64-unknown-linux-gnu
+
+      - name: Upload Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
 
   # Run tests
   test:
