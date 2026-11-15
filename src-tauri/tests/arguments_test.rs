@@ -1,6 +1,6 @@
 // Unit tests for argument parsing and placeholder substitution
 use offline_launcher_lib::launch::arguments::{substitute_placeholders, LaunchArguments};
-use offline_launcher_lib::accounts::OfflineAccount;
+use offline_launcher_lib::accounts::{OfflineAccount, Account};
 use offline_launcher_lib::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Argument, ArgumentValue, LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
 use std::collections::HashMap;
 use std::path::PathBuf;
