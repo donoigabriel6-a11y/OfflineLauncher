@@ -51,12 +51,17 @@ mod tests {
     #[test]
     fn test_known_usernames() {
         // These are verified against vanilla Minecraft offline mode
-        // "Steve" -> 8667ba71-b85a-3340-af54-457a9734eed7
+        // Offline UUID = MD5("OfflinePlayer:<username>") with version=3, variant=RFC4122
+        // "Steve" -> MD5("OfflinePlayer:Steve") = 5627dd98e6bebc21f8a8e92344183641
+        // With version=3 (byte 6: bc->3c), variant=RFC4122 (byte 8: f8->b8)
+        // = 5627dd98-e6be-3c21-b8a8-e92344183641
         let steve_uuid = generate_offline_uuid("Steve");
-        assert_eq!(steve_uuid.to_string(), "8667ba71-b85a-3340-af54-457a9734eed7");
+        assert_eq!(steve_uuid.to_string(), "5627dd98-e6be-3c21-b8a8-e92344183641");
 
-        // "Alex" -> e70671d5-6c79-3d23-8e76-447a2d8d3b5c
+        // "Alex" -> MD5("OfflinePlayer:Alex") = 36532b5ec442edbb224cc7e55d0f979a
+        // With version=3 (byte 6: ed->3d), variant=RFC4122 (byte 8: 22->a2)
+        // = 36532b5e-c442-3dbb-a24c-c7e55d0f979a
         let alex_uuid = generate_offline_uuid("Alex");
-        assert_eq!(alex_uuid.to_string(), "e70671d5-6c79-3d23-8e76-447a2d8d3b5c");
+        assert_eq!(alex_uuid.to_string(), "36532b5e-c442-3dbb-a24c-c7e55d0f979a");
     }
 }
