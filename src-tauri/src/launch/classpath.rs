@@ -149,7 +149,10 @@ async fn extract_native_jar(
     let cursor = Cursor::new(buffer);
     let mut archive = ZipArchive::new(cursor)?;
 
-    let exclude_patterns = extract_rules.map(|r| &r.exclude).unwrap_or(&Vec::new());
+    let exclude_patterns = extract_rules
+    .map(|r| r.exclude.as_slice())
+    .unwrap_or(&[]);
+
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
