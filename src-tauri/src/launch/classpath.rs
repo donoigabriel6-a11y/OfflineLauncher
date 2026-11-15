@@ -16,8 +16,8 @@ pub fn build_classpath(
 
     // Add libraries
     for library in &version.libraries {
-        // Check if library applies to current platform
-        if !crate::versions::library::evaluate_library_rules(&library.rules).unwrap_or(true) {
+        // Check if library applies to current platform (default allow for libraries)
+        if !crate::versions::library::evaluate_library_rules(&library.rules, true).unwrap_or(true) {
             continue;
         }
 
@@ -84,7 +84,8 @@ pub async fn extract_natives(
     fs::create_dir_all(natives_dir).await?;
 
     for library in &version.libraries {
-        if !crate::versions::library::evaluate_library_rules(&library.rules).unwrap_or(true) {
+        // Check if library applies to current platform (default allow for libraries)
+        if !crate::versions::library::evaluate_library_rules(&library.rules, true).unwrap_or(true) {
             continue;
         }
 

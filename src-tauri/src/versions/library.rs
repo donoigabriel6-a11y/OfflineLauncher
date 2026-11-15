@@ -4,16 +4,18 @@ use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOsName};
 use crate::error::Result;
 
 /// Evaluate library rules for the current platform
-pub fn evaluate_library_rules(rules: &[LibraryRule]) -> Result<bool> {
+/// For libraries: default_allow = true (libraries allowed unless explicitly disallowed)
+/// For conditional arguments: default_allow = false (arguments only included if explicitly allowed)
+pub fn evaluate_library_rules(rules: &[LibraryRule], default_allow: bool) -> Result<bool> {
     if rules.is_empty() {
-        return Ok(true); // No rules = allow
+        return Ok(default_allow);
     }
 
     let current_os = current_os_name();
     let current_arch = current_arch();
     let current_version = current_os_version();
 
-    let mut allowed = true; // Default allow if no rules match
+    let mut allowed = default_allow;
 
     for rule in rules {
         let rule_applies = matches_rule(&rule, &current_os, &current_arch, &current_version)?;
@@ -188,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_empty_rules_allow() {
-        assert!(evaluate_library_rules(&[]).unwrap());
+        assert!(evaluate_library_rules(&[], true).unwrap());
     }
 
     #[test]
@@ -198,7 +200,7 @@ mod tests {
             os: None,
             features: None,
         }];
-        assert!(evaluate_library_rules(&rules).unwrap());
+        assert!(evaluate_library_rules(&rules, true).unwrap());
     }
 
     #[test]
@@ -208,7 +210,7 @@ mod tests {
             os: None,
             features: None,
         }];
-        assert!(!evaluate_library_rules(&rules).unwrap());
+        assert!(!evaluate_library_rules(&rules, true).unwrap());
     }
 
     #[test]
@@ -223,7 +225,7 @@ mod tests {
             }),
             features: None,
         }];
-        assert!(evaluate_library_rules(&rules).unwrap());
+        assert!(evaluate_library_rules(&rules, true).unwrap());
     }
 
     #[test]
@@ -243,7 +245,7 @@ mod tests {
             features: None,
         }];
         // Should be allowed since rule doesn't apply to current OS
-        assert!(evaluate_library_rules(&rules).unwrap());
+        assert!(evaluate_library_rules(&rules, true).unwrap());
     }
 
     #[test]

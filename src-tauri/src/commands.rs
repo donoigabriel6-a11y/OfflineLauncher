@@ -253,7 +253,7 @@ pub async fn versions_download(
 
     // 2. Libraries (filter by platform rules)
     for library in &version_json.libraries {
-        if !crate::versions::library::evaluate_library_rules(&library.rules).unwrap_or(true) {
+        if !crate::versions::library::evaluate_library_rules(&library.rules, true).unwrap_or(true) {
             continue;
         }
 

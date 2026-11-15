@@ -154,8 +154,9 @@ fn parse_argument_list(
 }
 
 /// Evaluate argument rules (reuse library rules logic)
+/// For conditional arguments, default to false (only include if explicitly allowed)
 fn evaluate_argument_rules(rules: &[crate::versions::model::LibraryRule]) -> Result<bool> {
-    crate::versions::library::evaluate_library_rules(rules)
+    crate::versions::library::evaluate_library_rules(rules, false)
 }
 
 /// Substitute all ${placeholder} occurrences in a string
