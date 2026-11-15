@@ -67,7 +67,7 @@ tempfile = "3.0"
 tokio-test = "0.4"
 
 [features]
-# Default features
-default = ["custom-protocol"]
-# Custom protocol for deep linking
+# Default features (custom-protocol disabled by default - breaks file:// protocol)
+default = []
+# Custom protocol for deep linking (enable manually if needed)
 custom-protocol = ["tauri/custom-protocol"]

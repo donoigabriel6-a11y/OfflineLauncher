@@ -98,6 +98,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_BUILD_RUSTFLAGS: -Clink-args=/SUBSYSTEM:WINDOWS
         with:
           projectPath: src-tauri
           args: --target x86_64-pc-windows-msvc
