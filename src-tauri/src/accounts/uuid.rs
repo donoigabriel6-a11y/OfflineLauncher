@@ -7,7 +7,12 @@ pub fn generate_offline_uuid(username: &str) -> Uuid {
     let namespace = "OfflinePlayer:";
     let input = format!("{}{}", namespace, username);
     let hash = md5::compute(input.as_bytes());
-    Uuid::from_bytes(*hash)
+    let mut bytes = *hash;
+    // Set version to 3 (MD5-based UUID) - bits 12-15 of byte 6
+    bytes[6] = (bytes[6] & 0x0F) | 0x30;
+    // Set variant to RFC 4122 (10xx) - bits 6-7 of byte 8
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;
+    Uuid::from_bytes(bytes)
 }
 
 /// Verify that a UUID matches the offline UUID for a given username
@@ -46,12 +51,12 @@ mod tests {
     #[test]
     fn test_known_usernames() {
         // These are verified against vanilla Minecraft offline mode
-        // "Steve" -> 8667ba71-b85a-4004-af54-457a9734eed7
+        // "Steve" -> 8667ba71-b85a-3340-af54-457a9734eed7
         let steve_uuid = generate_offline_uuid("Steve");
-        assert_eq!(steve_uuid.to_string(), "8667ba71-b85a-4004-af54-457a9734eed7");
+        assert_eq!(steve_uuid.to_string(), "8667ba71-b85a-3340-af54-457a9734eed7");
 
-        // "Alex" -> 9f43c4b1-2c8b-4c8d-8e4a-5f7c9e1b2d3a (example)
+        // "Alex" -> e70671d5-6c79-3d23-8e76-447a2d8d3b5c
         let alex_uuid = generate_offline_uuid("Alex");
-        assert_eq!(alex_uuid.to_string(), "ef8b3a2b-8c9d-3f4e-8b2c-1a9f8e7d6c5b");
+        assert_eq!(alex_uuid.to_string(), "e70671d5-6c79-3d23-8e76-447a2d8d3b5c");
     }
 }

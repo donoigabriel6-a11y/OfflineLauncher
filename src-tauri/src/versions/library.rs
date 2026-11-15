@@ -13,7 +13,7 @@ pub fn evaluate_library_rules(rules: &[LibraryRule]) -> Result<bool> {
     let current_arch = current_arch();
     let current_version = current_os_version();
 
-    let mut allowed = false;
+    let mut allowed = true; // Default allow if no rules match
 
     for rule in rules {
         let rule_applies = matches_rule(&rule, &current_os, &current_arch, &current_version)?;

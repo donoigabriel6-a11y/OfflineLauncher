@@ -157,7 +157,7 @@ fn extract_version(output: &str) -> Option<String> {
 }
 
 fn parse_major_version(version: &str) -> Option<u8> {
-    // Handle "1.8.0_381" -> 8, "11.0.1" -> 11, "21.0.1" -> 21
+    // Handle "1.8.0_381" -> 8, "11.0.1" -> 11, "21.0.1" -> 21, "9" -> 9
     let parts: Vec<&str> = version.split('.').collect();
     if parts.len() >= 2 {
         if parts[0] == "1" {
@@ -165,6 +165,9 @@ fn parse_major_version(version: &str) -> Option<u8> {
         } else {
             parts[0].parse().ok()
         }
+    } else if parts.len() == 1 {
+        // Handle single number like "9"
+        parts[0].parse().ok()
     } else {
         None
     }
