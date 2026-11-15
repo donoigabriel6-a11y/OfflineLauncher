@@ -61,7 +61,10 @@ tracing-subscriber = { workspace = true }
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
-winres = { version = "0.1", cfg = 'target_os = "windows"' }
+
+# Windows subsystem resource compiler (only used on Windows)
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
 
 [dev-dependencies]
 tempfile = "3.0"

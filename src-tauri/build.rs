@@ -7,6 +7,6 @@ fn main() {
     {
         let mut res = winres::WindowsResource::new();
         res.set_subsystem(winres::Subsystem::Windows);
-        res.compile().unwrap();
+        res.compile().expect("Failed to compile Windows resources");
     }
 }

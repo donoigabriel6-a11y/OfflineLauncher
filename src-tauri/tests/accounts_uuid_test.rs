@@ -1,5 +1,5 @@
 // Unit tests for offline UUID generation
-use offline_launcher_lib::accounts::{generate_offline_uuid, validate_username, OfflineAccount};
+use offline_launcher_lib::accounts::{generate_offline_uuid, validate_username, OfflineAccount, Account};
 use uuid::Uuid;
 
 #[test]
