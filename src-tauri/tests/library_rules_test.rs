@@ -4,7 +4,7 @@ use offline_launcher_lib::versions::model::{LibraryRule, LibraryRuleAction, Libr
 
 #[test]
 fn test_empty_rules_allow() {
-    assert!(evaluate_library_rules(&[]).unwrap());
+    assert!(evaluate_library_rules(&[], true).unwrap());
 }
 
 #[test]
@@ -14,7 +14,7 @@ fn test_allow_rule_no_os() {
         os: None,
         features: None,
     }];
-    assert!(evaluate_library_rules(&rules).unwrap());
+    assert!(evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_disallow_rule_no_os() {
         os: None,
         features: None,
     }];
-    assert!(!evaluate_library_rules(&rules).unwrap());
+    assert!(!evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_os_specific_allow() {
         }),
         features: None,
     }];
-    assert!(evaluate_library_rules(&rules).unwrap());
+    assert!(evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_os_specific_disallow() {
         features: None,
     }];
     // Should be allowed since rule doesn't apply to current OS
-    assert!(evaluate_library_rules(&rules).unwrap());
+    assert!(evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn test_multiple_rules_last_wins() {
         },
     ];
     // Last matching rule wins - disallow for current OS
-    assert!(!evaluate_library_rules(&rules).unwrap());
+    assert!(!evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
