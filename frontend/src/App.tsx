@@ -1,8 +1,8 @@
 // Main App component with routing
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { ToastProvider } from '@/components/ui/Toaster';
+import { ToastProvider, Toaster } from '@/components/ui/Toaster';
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('@/pages/Home').then((module) => ({ default: module.Home })));
@@ -31,55 +31,54 @@ function PageLoading() {
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/home" replace />} />
-            <Route
-              path="home"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <Home />
-                </Suspense>
-              }
-            />
-            <Route
-              path="accounts"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <Accounts />
-                </Suspense>
-              }
-            />
-            <Route
-              path="versions"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <Versions />
-                </Suspense>
-              }
-            />
-            <Route
-              path="instances"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <Instances />
-                </Suspense>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <Settings />
-                </Suspense>
-              }
-            />
-          </Route>
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route
+            path="home"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <Home />
+              </Suspense>
+            }
+          />
+          <Route
+            path="accounts"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <Accounts />
+              </Suspense>
+            }
+          />
+          <Route
+            path="versions"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <Versions />
+              </Suspense>
+            }
+          />
+          <Route
+            path="instances"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <Instances />
+              </Suspense>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <Settings />
+              </Suspense>
+            }
+          />
+        </Route>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Routes>
+      <Toaster />
     </ToastProvider>
   );
 }
