@@ -101,7 +101,8 @@ fn test_launch_arguments_from_version() {
     assert!(args.game_args.iter().any(|a| a == "--username"));
     assert!(args.game_args.iter().any(|a| a == "TestPlayer"));
     assert!(args.game_args.iter().any(|a| a == "--uuid"));
-    assert!(args.game_args.iter().any(|a| a == account.uuid().to_string().replace('-', "")));
+    let expected_uuid = account.uuid().to_string().replace('-', "");
+    assert!(args.game_args.iter().any(|a| a == &expected_uuid));
     assert!(args.game_args.iter().any(|a| a == "--accessToken"));
     assert!(args.game_args.iter().any(|a| a == "0"));
 
