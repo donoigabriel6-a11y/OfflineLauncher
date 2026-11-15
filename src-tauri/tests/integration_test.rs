@@ -56,8 +56,8 @@ async fn test_ensure_dirs() {
 #[tokio::test]
 async fn test_download_manager_creation() {
     let manager = DownloadManager::new(DownloadOptions::default());
-    assert_eq!(manager.options.max_concurrent, 8);
-    assert_eq!(manager.options.max_retries, 3);
+    assert_eq!(manager.options().max_concurrent, 8);
+    assert_eq!(manager.options().max_retries, 3);
 }
 
 #[tokio::test]

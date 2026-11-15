@@ -66,6 +66,11 @@ impl DownloadManager {
         }
     }
 
+    /// Get the download options
+    pub fn options(&self) -> &DownloadOptions {
+        &self.options
+    }
+
     /// Download a single file with resume support and retries
     pub async fn download_file(
         &self,
