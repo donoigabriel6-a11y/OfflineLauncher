@@ -13,6 +13,13 @@ A cross-platform Minecraft Java Edition launcher with first-class offline accoun
 - **Real-time Progress**: Streaming download and launch progress
 - **Cross-platform**: Windows, macOS, and Linux support
 
+
+## Screenshots
+- Home menu
+<img src="covers/Cover.jpg" alt="homemenu.png" width="150" />
+
+
+
 ## Architecture
 
 ```
