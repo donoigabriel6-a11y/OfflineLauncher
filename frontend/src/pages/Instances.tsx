@@ -207,7 +207,7 @@ export function Instances() {
       />
 
       <PageLayout className="flex flex-1 flex-col">
-        <div className="mx-auto w-full max-w-5xl flex-1 space-y-4">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4">
           {isLoading ? (
             <Card>
               <CardContent className="py-12 text-center">

@@ -17,7 +17,9 @@ export function Layout() {
           sidebarOpen ? 'ml-64' : 'ml-20'
         )}
       >
-        <Outlet />
+        <div className="min-h-0 flex-1">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

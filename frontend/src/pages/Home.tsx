@@ -189,8 +189,8 @@ export function Home() {
         }
       />
 
-      <PageLayout className="flex flex-1" padding="lg">
-        <div className="mx-auto w-full max-w-4xl flex-1 space-y-6">
+      <PageLayout className="flex flex-1 flex-col" padding="lg">
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
           {/* Instance Selector */}
           <Card>
             <CardContent className="pt-0">
