@@ -16,7 +16,7 @@ A cross-platform Minecraft Java Edition launcher with first-class offline accoun
 
 ## Screenshots
 - Home menu
-<img src="covers/Cover.jpg" alt="homemenu.png" width="150" />
+<img src="covers/homemenu.jpg" alt="homemenu.png" width="150" />
 
 
 
