@@ -5,7 +5,9 @@ export interface Account {
   username: string;
   uuid: string;
   accountType: 'offline' | 'microsoft';
-  skinPath?: string;
+  accessToken: string;
+  userType: 'legacy' | 'msa' | 'mojang';
+  skinPath: string | null;
   createdAt: string;
   updatedAt: string;
 }

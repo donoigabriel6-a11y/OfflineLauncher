@@ -1,7 +1,7 @@
 // Tauri event listeners
 import { listen } from '@tauri-apps/api/event';
 import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { DownloadProgress, LaunchOutput, LaunchStatus } from '@/types';
+import type { DownloadProgress, LaunchOutput, LaunchStatus, Account } from '@/types';
 
 type DownloadProgressCallback = (progress: DownloadProgress) => void;
 type DownloadCompleteCallback = (event: {
@@ -13,13 +13,6 @@ type LaunchOutputCallback = (output: LaunchOutput) => void;
 type LaunchStatusCallback = (status: LaunchStatus) => void;
 type AccountsChangedCallback = (event: { action: string; account: Account }) => void;
 type InstancesChangedCallback = (event: { action: string; instance: Instance }) => void;
-
-interface Account {
-  id: string;
-  username: string;
-  uuid: string;
-  accountType: string;
-}
 
 interface Instance {
   id: string;
