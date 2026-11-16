@@ -145,8 +145,8 @@ export function Versions() {
         }
       />
 
-      <PageLayout>
-        <div className="mx-auto w-full max-w-4xl space-y-6">
+      <PageLayout className="flex flex-1">
+        <div className="mx-auto w-full max-w-4xl flex-1 space-y-6">
           {/* Filters */}
           <Card>
             <CardContent className="pt-0">

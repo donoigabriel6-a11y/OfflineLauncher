@@ -152,8 +152,8 @@ export function Accounts() {
         }
       />
 
-      <PageLayout>
-        <div className="mx-auto w-full max-w-3xl space-y-4">
+      <PageLayout className="flex flex-1">
+        <div className="mx-auto w-full max-w-3xl flex-1 space-y-4">
           {accounts.length === 0 ? (
             <Card variant="outlined">
               <CardContent className="py-12 text-center">

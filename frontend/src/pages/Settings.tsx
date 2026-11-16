@@ -139,8 +139,8 @@ export function Settings() {
         }
       />
 
-      <PageLayout>
-        <div className="mx-auto w-full max-w-3xl space-y-6">
+      <PageLayout className="flex flex-1">
+        <div className="mx-auto w-full max-w-3xl flex-1 space-y-6">
           {/* General */}
           <Card>
             <CardHeader>
