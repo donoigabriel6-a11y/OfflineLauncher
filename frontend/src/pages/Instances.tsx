@@ -216,8 +216,8 @@ export function Instances() {
               </CardContent>
             </Card>
           ) : instances.length === 0 ? (
-            <Card variant="outlined" className="flex-1 flex flex-col">
-              <CardContent className="flex-1 flex flex-col items-center justify-center py-12">
+            <Card variant="outlined" className="flex flex-1 flex-col">
+              <CardContent className="flex flex-1 flex-col items-center justify-center py-12">
                 <p className="mb-4 text-surface-500">No instances yet</p>
                 <Button
                   onClick={() => setShowCreateModal(true)}

@@ -155,8 +155,8 @@ export function Accounts() {
       <PageLayout className="flex flex-1">
         <div className="mx-auto w-full max-w-3xl flex-1 space-y-4">
           {accounts.length === 0 ? (
-            <Card variant="outlined" className="flex-1 flex flex-col">
-              <CardContent className="flex-1 flex flex-col items-center justify-center py-12">
+            <Card variant="outlined" className="flex flex-1 flex-col">
+              <CardContent className="flex flex-1 flex-col items-center justify-center py-12">
                 <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-surface-600" />
                 <h3 className="mb-2 text-lg font-medium text-surface-100">No accounts yet</h3>
                 <p className="mb-6 text-surface-500">Create an offline account to start playing</p>

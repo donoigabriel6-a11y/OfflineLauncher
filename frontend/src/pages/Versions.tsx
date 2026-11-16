@@ -186,8 +186,8 @@ export function Versions() {
               </CardContent>
             </Card>
           ) : sortedVersions.length === 0 ? (
-            <Card variant="outlined" className="flex-1 flex flex-col">
-              <CardContent className="flex-1 flex flex-col items-center justify-center py-12">
+            <Card variant="outlined" className="flex flex-1 flex-col">
+              <CardContent className="flex flex-1 flex-col items-center justify-center py-12">
                 <p className="text-surface-500">No versions match your filters</p>
               </CardContent>
             </Card>
