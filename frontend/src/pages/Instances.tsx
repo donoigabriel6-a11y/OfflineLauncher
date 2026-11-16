@@ -206,7 +206,7 @@ export function Instances() {
         }
       />
 
-      <PageLayout className="flex flex-col flex-1">
+      <PageLayout className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-5xl flex-1 space-y-4">
           {isLoading ? (
             <Card>
