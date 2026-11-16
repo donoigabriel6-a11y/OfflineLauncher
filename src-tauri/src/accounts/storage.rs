@@ -40,14 +40,29 @@ pub enum StoredAccount {
         id: Uuid,
         username: String,
         uuid: Uuid,
+        #[serde(default = "default_account_type")]
         account_type: AccountType,
+        #[serde(default = "default_access_token")]
         access_token: String,
+        #[serde(default = "default_user_type")]
         user_type: UserType,
         skin_path: Option<PathBuf>,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
     },
     // Microsoft { ... } // Future
+}
+
+fn default_account_type() -> AccountType {
+    AccountType::Offline
+}
+
+fn default_access_token() -> String {
+    "0".to_string()
+}
+
+fn default_user_type() -> UserType {
+    UserType::Legacy
 }
 
 impl From<&OfflineAccount> for StoredAccount {
