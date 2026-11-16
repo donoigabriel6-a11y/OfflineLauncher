@@ -11,6 +11,9 @@ use tokio::sync::Mutex;
 use tauri::AppHandle;
 use uuid::Uuid;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Handle to a running game process
 #[derive(Clone)]
 pub struct LaunchHandle {
@@ -93,6 +96,13 @@ impl GameProcess {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+
+        // On Windows, prevent console window from appearing for child processes
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
 
         tracing::info!("Launching game: {} {:?} {} {:?}",
             java_exe.display(), jvm_args, main_class, game_args);

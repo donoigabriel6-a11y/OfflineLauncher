@@ -178,8 +178,11 @@ impl InstanceStorage {
 
         #[cfg(target_os = "windows")]
         {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             std::process::Command::new("explorer")
                 .arg(&game_dir)
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn()?;
         }
         #[cfg(target_os = "macos")]

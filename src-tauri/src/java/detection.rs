@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// A detected Java installation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -110,8 +113,17 @@ fn common_java_dirs() -> Vec<PathBuf> {
 }
 
 pub(crate) async fn parse_java_version(java_exe: &Path) -> Result<JavaInstallation> {
-    let output = Command::new(java_exe)
-        .arg("-version")
+    let mut cmd = Command::new(java_exe);
+    cmd.arg("-version");
+
+    // On Windows, prevent console window from appearing
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = cmd
         .output()
         .await
         .map_err(|e| LauncherError::JavaNotFound(e.to_string()))?;
