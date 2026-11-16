@@ -153,7 +153,7 @@ export function Accounts() {
       />
 
       <PageLayout className="flex flex-col flex-1">
-        <div className="mx-auto w-full max-w-3xl flex-1 space-y-4">
+        <div className="mx-auto w-full max-w-3xl flex flex-col flex-1 gap-4">
           {accounts.length === 0 ? (
             <Card variant="outlined" className="flex flex-1 flex-col">
               <CardContent className="flex flex-1 flex-col items-center justify-center py-12">
@@ -169,7 +169,7 @@ export function Accounts() {
               </CardContent>
             </Card>
           ) : (
-            <div className="flex-1 space-y-3 overflow-y-auto">
+            <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
               {accounts.map((account) => (
                 <Card
                   key={account.id}
