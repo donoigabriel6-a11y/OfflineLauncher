@@ -186,13 +186,13 @@ export function Versions() {
               </CardContent>
             </Card>
           ) : sortedVersions.length === 0 ? (
-            <Card variant="outlined">
-              <CardContent className="py-12 text-center">
+            <Card variant="outlined" className="flex-1 flex flex-col">
+              <CardContent className="flex-1 flex flex-col items-center justify-center py-12">
                 <p className="text-surface-500">No versions match your filters</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {sortedVersions.map((version) => {
                 const progress = downloads.get(version.id);
                 const isDownloaded =
