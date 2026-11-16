@@ -40,6 +40,9 @@ pub enum StoredAccount {
         id: Uuid,
         username: String,
         uuid: Uuid,
+        account_type: AccountType,
+        access_token: String,
+        user_type: UserType,
         skin_path: Option<PathBuf>,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
@@ -53,6 +56,9 @@ impl From<&OfflineAccount> for StoredAccount {
             id: acc.id(),
             username: acc.username().to_string(),
             uuid: acc.uuid(),
+            account_type: acc.account_type(),
+            access_token: acc.access_token().to_string(),
+            user_type: acc.user_type(),
             skin_path: acc.skin_path().cloned(),
             created_at: acc.created_at(),
             updated_at: acc.updated_at(),
@@ -64,8 +70,8 @@ impl StoredAccount {
     /// Convert back to an Account trait object
     pub fn into_account(self) -> Box<dyn Account> {
         match self {
-            StoredAccount::Offline { id, username, uuid, skin_path, created_at, updated_at } => {
-                Box::new(OfflineAccount::from_storage(id, username, uuid, skin_path, created_at, updated_at))
+            StoredAccount::Offline { id, username, uuid, account_type, access_token, user_type, skin_path, created_at, updated_at } => {
+                Box::new(OfflineAccount::from_storage(id, username, uuid, account_type, access_token, user_type, skin_path, created_at, updated_at))
             }
         }
     }
