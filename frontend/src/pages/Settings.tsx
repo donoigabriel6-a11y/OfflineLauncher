@@ -139,7 +139,7 @@ export function Settings() {
         }
       />
 
-      <PageLayout className="flex flex-1">
+      <PageLayout className="flex flex-col flex-1">
         <div className="mx-auto w-full max-w-3xl flex-1 space-y-6">
           {/* General */}
           <Card>

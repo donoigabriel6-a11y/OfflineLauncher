@@ -152,7 +152,7 @@ export function Accounts() {
         }
       />
 
-      <PageLayout className="flex flex-1">
+      <PageLayout className="flex flex-col flex-1">
         <div className="mx-auto w-full max-w-3xl flex-1 space-y-4">
           {accounts.length === 0 ? (
             <Card variant="outlined" className="flex flex-1 flex-col">
