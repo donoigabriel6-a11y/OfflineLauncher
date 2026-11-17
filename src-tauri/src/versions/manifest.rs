@@ -11,6 +11,9 @@ const MANIFEST_URL: &str = "https://piston-meta.mojang.com/mc/game/version_manif
 pub async fn fetch_version_manifest(client: &Client) -> Result<VersionManifest> {
     let response = client
         .get(MANIFEST_URL)
+        // Do not negotiate compressed bodies: some Windows proxy/security filters
+        // return invalid gzip streams, which reqwest reports as body decode errors.
+        .header(reqwest::header::ACCEPT_ENCODING, "identity")
         .timeout(Duration::from_secs(30))
         .send()
         .await

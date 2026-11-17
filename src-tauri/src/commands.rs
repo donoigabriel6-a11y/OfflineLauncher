@@ -214,6 +214,7 @@ pub async fn versions_download(
 
     // Download version JSON
     let response = state.http_client.get(&version_entry.url)
+        .header(reqwest::header::ACCEPT_ENCODING, "identity")
         .send().await
         .map_err(|e| LauncherError::Http(e))?;
 

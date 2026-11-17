@@ -140,7 +140,8 @@ impl DownloadManager {
             resume_from = tokio::fs::metadata(&temp_path).await?.len();
         }
 
-        let mut request = self.client.get(&task.url);
+        let mut request = self.client.get(&task.url)
+            .header(reqwest::header::ACCEPT_ENCODING, "identity");
         if resume_from > 0 {
             request = request.header("Range", format!("bytes={}-", resume_from));
         }
