@@ -113,6 +113,8 @@ pub struct DownloadInfo {
     #[serde(rename = "sha1")]
     pub sha1: String,
     pub size: u64,
+    #[serde(default)]
+    pub path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
