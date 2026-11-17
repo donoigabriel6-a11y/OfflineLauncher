@@ -140,8 +140,18 @@ export function Accounts() {
     toast({ type: 'success', title: 'Copied', message: 'UUID copied to clipboard' });
   };
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[DEBUG] Accounts component mounted, accounts:', accounts);
+    return () => console.log('[DEBUG] Accounts component unmounted');
+  }, [accounts]);
+
+  useEffect(() => {
+    console.log('[DEBUG] Selected account ID changed:', selectedAccountId);
+  }, [selectedAccountId]);
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" ref={(el: HTMLDivElement | null) => { console.log('[DEBUG] Accounts root div:', el); }}>
       <Header
         title="Accounts"
         subtitle="Manage your offline accounts"
@@ -153,7 +163,7 @@ export function Accounts() {
       />
 
       <PageLayout className="flex flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4" ref={(el: HTMLDivElement | null) => { console.log('[DEBUG] Content div:', el); }}>
           {accounts.length === 0 ? (
             <Card variant="outlined" className="flex flex-1 flex-col">
               <CardContent className="flex flex-1 flex-col items-center justify-center py-12">
