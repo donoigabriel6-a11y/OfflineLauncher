@@ -330,7 +330,10 @@ export function Accounts() {
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={!!getUsernameError(editUsername, editingAccount?.id)}>
+            <Button
+              onClick={handleUpdate}
+              disabled={!!getUsernameError(editUsername, editingAccount?.id)}
+            >
               Save Changes
             </Button>
           </div>
