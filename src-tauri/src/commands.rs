@@ -16,7 +16,7 @@ use crate::{
     Result, LauncherError,
 };
 use reqwest::StatusCode;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use crate::accounts::model::validate_username;
 use crate::accounts::uuid::generate_offline_uuid;
 use crate::app_dirs::get_app_data_dir;
@@ -368,23 +368,28 @@ pub async fn versions_download(
                     let hash = obj.get("hash").and_then(|v| v.as_str()).unwrap_or("");
                     let size = obj.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
 
-                    if !hash.is_empty() {
-                        // Asset URL format: https://resources.download.minecraft.net/{first2}/{hash}
-                        let url = format!("https://resources.download.minecraft.net/{}/{}", &hash[..2], hash);
-
-                        // Destination: assets/objects/{first2}/{hash}
-                        let dest_dir = assets_objects_dir.join(&hash[..2]);
-                        let dest_path = dest_dir.join(hash);
-
-                        asset_tasks.push(crate::downloads::DownloadTask {
-                            url,
-                            destination: dest_path,
-                            expected_sha1: Some(hash.to_string()),
-                            file_name: asset_path.clone(),
-                            stage: DownloadStage::Assets,
-                            version_id: version_id.clone(),
-                        });
+                    if hash.len() != 40 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                        return Err(LauncherError::Launch(format!(
+                            "Invalid SHA-1 hash for asset '{}': {}",
+                            asset_path, hash
+                        )));
                     }
+
+                    // Asset URL format: https://resources.download.minecraft.net/{first2}/{hash}
+                    let url = format!("https://resources.download.minecraft.net/{}/{}", &hash[..2], hash);
+
+                    // Destination: assets/objects/{first2}/{hash}
+                    let dest_dir = assets_objects_dir.join(&hash[..2]);
+                    let dest_path = dest_dir.join(hash);
+
+                    asset_tasks.push(crate::downloads::DownloadTask {
+                        url,
+                        destination: dest_path,
+                        expected_sha1: Some(hash.to_string()),
+                        file_name: asset_path.clone(),
+                        stage: DownloadStage::Assets,
+                        version_id: version_id.clone(),
+                    });
                 }
             }
 
@@ -397,7 +402,13 @@ pub async fn versions_download(
                 for chunk in asset_tasks.chunks(50) {
                     let chunk_vec = chunk.to_vec();
                     if let Err(e) = download_manager.download_all(chunk_vec, Some(&app)).await {
-                        warn!("Asset batch download error (continuing): {}", e);
+                        error!("Asset batch download failed: {}", e);
+                        emit_download_complete(&app, DownloadCompleteEvent {
+                            version_id: version_id.clone(),
+                            success: false,
+                            error: Some(e.to_string()),
+                        })?;
+                        return Err(e);
                     }
                 }
             }
@@ -423,8 +434,8 @@ pub async fn versions_download(
 
 #[tauri::command]
 pub async fn versions_get_version_json(version_id: String) -> Result<VersionJson> {
-    let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
-    load_version_json(&version_id, &version_dir).await
+    let versions_dir = crate::app_dirs::get_versions_dir()?;
+    load_version_json(&version_id, &versions_dir).await
 }
 
 // ==================== JAVA COMMANDS ====================
@@ -579,8 +590,9 @@ pub async fn launch_start(
         .ok_or(LauncherError::AccountNotFound(account_id))?;
 
     // Load version JSON first to get required Java version
+    let versions_dir = crate::app_dirs::get_versions_dir()?;
     let version_dir = crate::app_dirs::get_version_dir(&instance.version_id)?;
-    let version_json = load_version_json(&instance.version_id, &version_dir).await?;
+    let version_json = load_version_json(&instance.version_id, &versions_dir).await?;
 
     // Resolve Java - use version's required Java version from version JSON
     let required_java = version_json.java_version.major_version;
