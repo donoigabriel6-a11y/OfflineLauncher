@@ -2,7 +2,7 @@
 use offline_launcher_lib::{
     versions::{fetch_version_manifest, VersionType},
     downloads::{DownloadManager, DownloadOptions, DownloadTask, DownloadStage},
-    app_dirs::{get_version_dir, get_libraries_dir, ensure_dirs},
+    app_dirs::{get_version_dir, get_versions_dir, get_libraries_dir, ensure_dirs},
     versions::inheritance::load_version_json,
     launch::classpath::build_classpath,
 };
@@ -63,7 +63,7 @@ async fn test_download_manager_creation() {
 async fn test_version_json_loading() {
     // This test would require a downloaded version
     // For now, just test that the function exists and handles missing files
-    let result = load_version_json("nonexistent", &get_version_dir("nonexistent").unwrap()).await;
+    let result = load_version_json("nonexistent", &get_versions_dir().unwrap()).await;
     assert!(result.is_err());
 }
 
