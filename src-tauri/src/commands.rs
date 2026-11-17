@@ -616,6 +616,7 @@ pub async fn launch_start(
         account.as_ref(),
         &instance.effective_game_dir(),
         &assets_dir,
+        &libraries_dir,
         &version_json.asset_index.id,
         &natives_dir,
         &classpath,
