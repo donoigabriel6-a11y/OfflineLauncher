@@ -311,7 +311,8 @@ export function Home() {
           <Card className={cn(selectedInstance && 'border-primary-500/30')}>
             <CardContent className="pt-0">
               {currentLaunchStatus &&
-              (currentLaunchStatus.status === 'starting' || currentLaunchStatus.status === 'running') ? (
+              (currentLaunchStatus.status === 'starting' ||
+                currentLaunchStatus.status === 'running') ? (
                 <div className="space-y-4 p-6 text-center">
                   <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-500" />
                   <div>
