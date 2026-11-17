@@ -148,6 +148,14 @@ impl DownloadManager {
         let response = request.send().await
             .map_err(|e| LauncherError::Http(e))?;
 
+        if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && resume_from > 0 {
+            tokio::fs::remove_file(&temp_path).await.ok();
+            return Err(LauncherError::Download(format!(
+                "Server rejected the partial download for {}; restarting is required",
+                task.file_name
+            )));
+        }
+
         if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
             return Err(LauncherError::Download(
                 format!("HTTP {}: {}", response.status(), task.url)
@@ -199,7 +207,11 @@ impl DownloadManager {
         // Verify hash if provided
         if let Some(expected) = &task.expected_sha1 {
             if self.options.verify_hash {
-                verify_sha1_or_error(&temp_path, expected, &task.file_name).await?;
+                if let Err(error) = verify_sha1_or_error(&temp_path, expected, &task.file_name).await {
+                    // Never resume a completed but corrupt file on the next retry.
+                    tokio::fs::remove_file(&temp_path).await.ok();
+                    return Err(error);
+                }
             }
         }
 
