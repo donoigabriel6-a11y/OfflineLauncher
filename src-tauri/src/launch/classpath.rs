@@ -55,17 +55,22 @@ pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<
         )));
     }
 
+    if let Some(path) = library.downloads.as_ref()
+        .and_then(|downloads| downloads.artifact.as_ref())
+        .and_then(|artifact| artifact.path.as_deref())
+    {
+        return library_download_path(libraries_dir, path);
+    }
+
     let (group, artifact, version) = (parts[0], parts[1], parts[2]);
     let group_path = group.replace('.', "/");
 
     let filename = format!("{}-{}.jar", artifact, version);
-    let path = libraries_dir
+    Ok(libraries_dir
         .join(group_path)
         .join(artifact)
         .join(version)
-        .join(filename);
-
-    Ok(path)
+        .join(filename))
 }
 
 /// Get the natives directory for a version
@@ -94,10 +99,9 @@ pub async fn extract_natives(
         let Some(classifier) = classifier else { continue };
 
         if let Some(natives_map) = &library.natives {
-            let native_artifact = natives_map.get(&classifier.to_string())
-                .or_else(|| natives_map.get(&format!("{}-{}", classifier, std::env::consts::ARCH)));
-
-            if let Some(native_classifier) = native_artifact {
+            // The `natives` map stores platform keys mapped to classifier names.
+            // Match the classifier value (for example `natives-windows`).
+            if let Some(native_classifier) = natives_map.values().find(|value| *value == &classifier) {
                 let artifact_path = library_native_path(library, libraries_dir, native_classifier)?;
                 if artifact_path.exists() {
                     extract_native_jar(&artifact_path, natives_dir, library.extract.as_ref()).await?;
@@ -107,6 +111,24 @@ pub async fn extract_natives(
     }
 
     Ok(())
+}
+
+fn library_download_path(libraries_dir: &Path, relative_path: &str) -> Result<PathBuf> {
+    use std::path::Component;
+
+    let path = Path::new(relative_path);
+    if relative_path.is_empty()
+        || relative_path.contains('\\')
+        || relative_path.contains(':')
+        || path.components().any(|component| matches!(
+            component,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        ))
+    {
+        return Err(LauncherError::Launch(format!("Invalid library download path: {}", relative_path)));
+    }
+
+    Ok(libraries_dir.join(path))
 }
 
 pub fn library_native_path(
@@ -122,17 +144,23 @@ pub fn library_native_path(
         )));
     }
 
+    if let Some(path) = library.downloads.as_ref()
+        .and_then(|downloads| downloads.classifiers.as_ref())
+        .and_then(|classifiers| classifiers.get(classifier))
+        .and_then(|download| download.path.as_deref())
+    {
+        return library_download_path(libraries_dir, path);
+    }
+
     let (group, artifact, version) = (parts[0], parts[1], parts[2]);
     let group_path = group.replace('.', "/");
 
     let filename = format!("{}-{}-{}.jar", artifact, version, classifier);
-    let path = libraries_dir
+    Ok(libraries_dir
         .join(group_path)
         .join(artifact)
         .join(version)
-        .join(filename);
-
-    Ok(path)
+        .join(filename))
 }
 
 async fn extract_native_jar(
