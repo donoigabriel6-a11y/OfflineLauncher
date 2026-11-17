@@ -81,6 +81,7 @@ export interface DownloadInfo {
   url: string;
   sha1: string;
   size: number;
+  path?: string;
 }
 
 export interface LibraryRule {
