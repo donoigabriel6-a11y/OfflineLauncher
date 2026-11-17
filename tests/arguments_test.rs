@@ -39,7 +39,7 @@ fn create_test_version() -> VersionJson {
         },
         minecraft_arguments: None,
         downloads: Downloads {
-            client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0 },
+            client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None },
             server: None,
             server_mappings: None,
         },
@@ -134,7 +134,7 @@ fn test_conditional_arguments() {
             jvm: vec![],
         },
         minecraft_arguments: None,
-        downloads: Downloads { client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0 }, server: None, server_mappings: None },
+        downloads: Downloads { client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None }, server: None, server_mappings: None },
         logging: None,
     };
 
