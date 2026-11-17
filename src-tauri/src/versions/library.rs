@@ -154,7 +154,7 @@ pub fn get_native_classifier() -> Option<String> {
     #[cfg(target_os = "windows")]
     {
         if cfg!(target_arch = "aarch64") {
-            Some("windows-arm64".to_string())
+            Some("natives-windows-arm64".to_string())
         } else {
             Some("natives-windows".to_string())
         }
