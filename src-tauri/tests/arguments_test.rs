@@ -87,6 +87,7 @@ fn test_launch_arguments_from_version() {
         &account,
         &PathBuf::from("/game"),
         &PathBuf::from("/assets"),
+        &PathBuf::from("/libraries"),
         "1.20",
         &PathBuf::from("/natives"),
         "/classpath",
