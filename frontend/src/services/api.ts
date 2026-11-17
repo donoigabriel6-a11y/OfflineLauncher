@@ -35,8 +35,7 @@ export const configApi = {
 // Accounts
 export const accountsApi = {
   list: () => handleTauriError(invoke<Account[]>('accounts_list')),
-  create: (username: string) =>
-    handleTauriError(invoke<Account>('accounts_create', { username })),
+  create: (username: string) => handleTauriError(invoke<Account>('accounts_create', { username })),
   update: (id: string, username?: string, skinPath?: string) =>
     handleTauriError(invoke<Account>('accounts_update', { id, username, skinPath })),
   delete: (id: string) => handleTauriError(invoke('accounts_delete', { id })),
