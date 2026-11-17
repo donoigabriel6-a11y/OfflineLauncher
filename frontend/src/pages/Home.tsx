@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useStore } from '@/store/useStore';
 import { useToast } from '@/components/ui/Toaster';
-import { accountsApi, instancesApi, launchApi, javaApi } from '@/services/api';
+import { accountsApi, instancesApi, launchApi, javaApi, versionsApi } from '@/services/api';
 import { eventManager } from '@/services/events';
 import {
   Play,
@@ -28,6 +28,7 @@ export function Home() {
   const {
     instances,
     accounts,
+    versions,
     selectedInstanceId,
     setSelectedInstanceId,
     selectedAccountId,
@@ -52,19 +53,21 @@ export function Home() {
   const currentLaunchStatus = selectedInstanceId ? launchStatus.get(selectedInstanceId) : null;
   const currentOutputs = selectedInstanceId ? launchOutputs.get(selectedInstanceId) || [] : [];
 
-  // Load instances and accounts on mount
+  // Load instances, accounts, and versions on mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [instancesData, accountsData, javaData] = await Promise.all([
+        const [instancesData, accountsData, javaData, versionsData] = await Promise.all([
           instancesApi.list(),
           accountsApi.list(),
           javaApi.listRuntimes(),
+          versionsApi.fetchManifest().then(m => m.versions),
         ]);
         useStore.getState().setInstances(instancesData);
         useStore.getState().setAccounts(accountsData);
         useStore.getState().setJavaInstallations(javaData);
+        useStore.getState().setVersions(versionsData);
 
         // Auto-select first instance/account if none selected
         if (!selectedInstanceId && instancesData.length > 0) {
@@ -420,7 +423,10 @@ export function Home() {
           <Select
             label="Minecraft Version"
             placeholder="Select version"
-            options={[]} // Would be populated from versions store
+            options={versions
+              .filter(v => v.type === 'release' || v.type === 'snapshot')
+              .sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' }))
+              .map(v => ({ value: v.id, label: `${v.id} (${v.type})` }))}
             value={newInstanceVersion}
             onChange={(e) => setNewInstanceVersion(e.target.value)}
           />

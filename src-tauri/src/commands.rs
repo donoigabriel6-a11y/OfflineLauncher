@@ -211,9 +211,21 @@ pub async fn versions_download(
         .ok_or(LauncherError::VersionNotFound(version_id.clone()))?;
 
     // Download version JSON
-    let version_json: VersionJson = state.http_client.get(&version_entry.url)
-        .send().await?
-        .json().await?;
+    let response = state.http_client.get(&version_entry.url)
+        .send().await
+        .map_err(|e| LauncherError::Http(e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(LauncherError::Download(format!(
+            "Failed to download version JSON ({}): {}",
+            status, text
+        )));
+    }
+
+    let version_json: VersionJson = response.json().await
+        .map_err(|e| LauncherError::Http(e))?;
 
     // Save version JSON
     let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
