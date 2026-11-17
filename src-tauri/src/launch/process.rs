@@ -116,8 +116,18 @@ impl GameProcess {
         })?;
 
         // Spawn process
-        let child = cmd.spawn()
-            .map_err(|e| LauncherError::Process(format!("Failed to spawn process: {}", e)))?;
+        let child = match cmd.spawn() {
+            Ok(child) => child,
+            Err(error) => {
+                let _ = emit_launch_status(&app, LaunchStatusEvent {
+                    instance_id: instance_id.to_string(),
+                    status: LaunchStatus::Crashed,
+                    exit_code: None,
+                    pid: None,
+                });
+                return Err(LauncherError::Process(format!("Failed to spawn process: {}", error)));
+            }
+        };
 
         let pid = child.id();
         handle.set_child(child).await;
@@ -150,6 +160,58 @@ impl GameProcess {
                 }
             });
         }
+
+        // Monitor the child without holding the lock between checks so the
+        // Stop Game command can still acquire it and kill the process.
+        let monitor_handle = handle.clone();
+        let monitor_app = app.clone();
+        let monitor_instance_id = instance_id.to_string();
+        tokio::spawn(async move {
+            loop {
+                let exit_status = {
+                    let mut child_guard = monitor_handle.child.lock().await;
+                    match child_guard.as_mut() {
+                        Some(child) => child.try_wait(),
+                        None => return,
+                    }
+                };
+
+                match exit_status {
+                    Ok(Some(status)) => {
+                        let exit_code = status.code();
+                        let launch_status = if status.success() {
+                            LaunchStatus::Exited
+                        } else {
+                            LaunchStatus::Crashed
+                        };
+                        monitor_handle.child.lock().await.take();
+                        let _ = emit_launch_status(&monitor_app, LaunchStatusEvent {
+                            instance_id: monitor_instance_id.clone(),
+                            status: launch_status,
+                            exit_code,
+                            pid,
+                        });
+                        break;
+                    }
+                    Ok(None) => tokio::time::sleep(std::time::Duration::from_millis(500)).await,
+                    Err(error) => {
+                        let _ = emit_launch_output(&monitor_app, LaunchOutputEvent {
+                            instance_id: monitor_instance_id.clone(),
+                            line: format!("Failed to monitor game process: {}", error),
+                            stream: OutputStream::Stderr,
+                        });
+                        monitor_handle.child.lock().await.take();
+                        let _ = emit_launch_status(&monitor_app, LaunchStatusEvent {
+                            instance_id: monitor_instance_id.clone(),
+                            status: LaunchStatus::Crashed,
+                            exit_code: None,
+                            pid,
+                        });
+                        break;
+                    }
+                }
+            }
+        });
 
         // Stream stderr
         if let Some(stderr) = stderr {
