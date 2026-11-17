@@ -142,13 +142,13 @@ fn test_conditional_arguments() {
 
     #[cfg(target_os = "windows")]
     {
-        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
+        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
         assert!(args.game_args.contains(&"--windows-only".to_string()));
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
+        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
         assert!(!args.game_args.contains(&"--windows-only".to_string()));
     }
 }
