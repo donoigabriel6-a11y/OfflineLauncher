@@ -29,7 +29,7 @@ use uuid::Uuid;
 pub use error::{LauncherError, Result};
 pub use config::Config;
 pub use accounts::{Account, AccountStorage, OfflineAccount, AccountType, UserType, validate_username, generate_offline_uuid};
-pub use versions::{VersionManifest, VersionEntry, VersionJson, VersionType, fetch_version_manifest};
+pub use versions::{VersionManifest, VersionEntry, VersionJson, VersionType, AssetIndexObject, fetch_version_manifest};
 pub use downloads::{DownloadManager, DownloadOptions, DownloadTask, DownloadProgress, DownloadStage};
 pub use java::{JavaManager, JavaInstallation, JavaSelection, JavaSource, detect_system_java};
 pub use instances::{InstanceStorage, Instance, ModLoader, MemorySettings, JavaSettings, Resolution};

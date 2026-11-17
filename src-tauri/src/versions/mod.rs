@@ -10,6 +10,6 @@ pub mod inheritance;
 
 pub use manifest::fetch_version_manifest;
 pub use model::{VersionManifest, VersionEntry, VersionType};
-pub use model::{VersionJson, Library, AssetIndex, Downloads, Arguments, Argument, JavaVersion, LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
+pub use model::{VersionJson, Library, AssetIndex, AssetIndexObject, Downloads, Arguments, Argument, JavaVersion, LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
 pub use library::evaluate_library_rules;
 pub use inheritance::resolve_inheritance;

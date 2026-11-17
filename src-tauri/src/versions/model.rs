@@ -88,6 +88,14 @@ pub struct AssetIndex {
     pub total_size: u64,
 }
 
+/// Asset index object entry (from the downloaded assets index JSON)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetIndexObject {
+    pub hash: String,
+    pub size: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Downloads {

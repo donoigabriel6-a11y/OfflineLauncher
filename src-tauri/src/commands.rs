@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::{
-    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson,
+    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson, AssetIndexObject,
     DownloadStage,
     JavaInstallation, JavaSelection,
     Instance,
@@ -306,8 +306,62 @@ pub async fn versions_download(
     // Handle results
     match results {
         Ok(_) => {
-            // Now download actual assets if needed
-            // For now, we'll just emit completion
+            // Now download actual assets from the assets index
+            let assets_dir = crate::app_dirs::get_assets_dir()?;
+            let asset_index_path = assets_dir.join("indexes").join(format!("{}.json", version_json.asset_index.id));
+
+            // Read the downloaded asset index
+            let asset_index_content = tokio::fs::read_to_string(&asset_index_path).await
+                .map_err(|e| LauncherError::Io(e))?;
+
+            let asset_index: serde_json::Value = serde_json::from_str(&asset_index_content)
+                .map_err(|e| LauncherError::Serde(e))?;
+
+            // Parse asset objects
+            let objects = asset_index.get("objects")
+                .and_then(|v| v.as_object())
+                .ok_or_else(|| LauncherError::Launch("Invalid assets index: missing objects".into()))?;
+
+            // Create download tasks for each asset
+            let mut asset_tasks = Vec::new();
+            let assets_objects_dir = assets_dir.join("objects");
+
+            for (asset_path, obj_value) in objects {
+                if let Some(obj) = obj_value.as_object() {
+                    let hash = obj.get("hash").and_then(|v| v.as_str()).unwrap_or("");
+                    let size = obj.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                    if !hash.is_empty() {
+                        // Asset URL format: https://resources.download.minecraft.net/{first2}/{hash}
+                        let url = format!("https://resources.download.minecraft.net/{}/{}", &hash[..2], hash);
+
+                        // Destination: assets/objects/{first2}/{hash}
+                        let dest_dir = assets_objects_dir.join(&hash[..2]);
+                        let dest_path = dest_dir.join(hash);
+
+                        asset_tasks.push(crate::downloads::DownloadTask {
+                            url,
+                            destination: dest_path,
+                            expected_sha1: Some(hash.to_string()),
+                            file_name: asset_path.clone(),
+                            stage: DownloadStage::Assets,
+                            version_id: version_id.clone(),
+                        });
+                    }
+                }
+            }
+
+            // Download assets with progress
+            if !asset_tasks.is_empty() {
+                let download_manager = state.download_manager.clone();
+
+                // Download in batches to avoid too many concurrent downloads
+                for chunk in asset_tasks.chunks(50) {
+                    let chunk_vec = chunk.to_vec();
+                    let _ = download_manager.download_all(chunk_vec, Some(&app)).await;
+                }
+            }
+
             emit_download_complete(&app, DownloadCompleteEvent {
                 version_id: version_id.clone(),
                 success: true,
