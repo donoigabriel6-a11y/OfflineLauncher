@@ -3,7 +3,7 @@
 use crate::app_dirs::get_java_runtimes_dir;
 use crate::error::{LauncherError, Result};
 use crate::java::detection::{detect_system_java, find_java_for_version};
-use crate::java::runtime::{fetch_adoptium_runtimes, fetch_java_runtimes, JavaRuntime};
+use crate::java::runtime::{fetch_adoptium_runtimes, JavaRuntime};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -78,30 +78,16 @@ impl JavaManager {
             }
         }
 
-        // 4. Download from Mojang
-        if let Ok(runtimes) = fetch_java_runtimes(&self.client).await {
-            if let Some(runtime) = runtimes.iter().find(|r| r.major_version >= required_major) {
-                let path = self.download_runtime(runtime).await?;
-                return Ok(JavaSelection {
-                    path,
-                    version: runtime.version.clone(),
-                    major_version: runtime.major_version,
-                    source: JavaSource::Mojang,
-                });
-            }
-        }
-
-        // 5. Fallback to Adoptium
-        if let Ok(runtimes) = fetch_adoptium_runtimes(&self.client, required_major).await {
-            if let Some(runtime) = runtimes.first() {
-                let path = self.download_runtime(runtime).await?;
-                return Ok(JavaSelection {
-                    path,
-                    version: runtime.version.clone(),
-                    major_version: runtime.major_version,
-                    source: JavaSource::Adoptium,
-                });
-            }
+        // 4. Download a compatible Adoptium JDK when no local Java is available.
+        let runtimes = fetch_adoptium_runtimes(&self.client, required_major).await?;
+        if let Some(runtime) = runtimes.first() {
+            let path = self.download_runtime(runtime).await?;
+            return Ok(JavaSelection {
+                path,
+                version: runtime.version.clone(),
+                major_version: runtime.major_version,
+                source: JavaSource::Adoptium,
+            });
         }
 
         Err(LauncherError::JavaNotFound(
@@ -112,15 +98,14 @@ impl JavaManager {
     async fn find_local_runtime(&self, runtimes_dir: &PathBuf, required_major: u8) -> Result<JavaSelection> {
         let mut entries = fs::read_dir(runtimes_dir).await?;
         while let Some(entry) = entries.next_entry().await? {
-            let java_exe = entry.path().join("bin").join(crate::java::detection::java_executable_name());
-            if java_exe.exists() {
-                let install = crate::java::detection::parse_java_version(&java_exe).await?;
+            let Ok(java_exe) = find_java_executable(&entry.path()) else { continue };
+            if let Ok(install) = crate::java::detection::parse_java_version(&java_exe).await {
                 if install.major_version >= required_major {
                     return Ok(JavaSelection {
                         path: java_exe,
                         version: install.version,
                         major_version: install.major_version,
-                        source: JavaSource::Mojang, // Could be either
+                        source: JavaSource::Adoptium,
                     });
                 }
             }
@@ -132,21 +117,72 @@ impl JavaManager {
         let runtimes_dir = get_java_runtimes_dir()?;
         fs::create_dir_all(&runtimes_dir).await?;
 
-        // Extract filename from URL or use version
         let filename = format!("java-{}-{}-{}", runtime.vendor, runtime.major_version, runtime.version);
         let dest_dir = runtimes_dir.join(&filename);
-        let dest_exe = dest_dir.join("bin").join(crate::java::detection::java_executable_name());
-
-        // Check if already downloaded
-        if dest_exe.exists() {
-            return Ok(dest_exe);
+        if let Ok(java_exe) = find_java_executable(&dest_dir) {
+            return Ok(java_exe);
         }
 
-        // Download and extract (simplified - real implementation would handle archives)
-        // For now, this is a stub
-        tracing::info!("Would download Java runtime from: {}", runtime.url);
+        if dest_dir.exists() {
+            fs::remove_dir_all(&dest_dir).await?;
+        }
 
-        Err(LauncherError::JavaNotFound("Java download not fully implemented".into()))
+        tracing::info!("Downloading Java runtime from: {}", runtime.url);
+        let response = self.client.get(&runtime.url).send().await
+            .map_err(LauncherError::Http)?;
+        if !response.status().is_success() {
+            return Err(LauncherError::Download(format!(
+                "Java runtime download failed: HTTP {}",
+                response.status()
+            )));
+        }
+
+        let archive_bytes = response.bytes().await.map_err(LauncherError::Http)?;
+        if runtime.size > 0 && archive_bytes.len() as u64 != runtime.size {
+            return Err(LauncherError::Download(format!(
+                "Java runtime archive size mismatch: expected {}, got {}",
+                runtime.size,
+                archive_bytes.len()
+            )));
+        }
+
+        let archive_extension = if cfg!(target_os = "windows") { "zip" } else { "tar.gz" };
+        let archive_path = runtimes_dir.join(format!("{}.{}", filename, archive_extension));
+        fs::write(&archive_path, &archive_bytes).await?;
+
+        let archive_for_extract = archive_path.clone();
+        let destination_for_extract = dest_dir.clone();
+        let extraction = tokio::task::spawn_blocking(move || -> std::io::Result<()> {
+            std::fs::create_dir_all(&destination_for_extract)?;
+            let archive_file = std::fs::File::open(&archive_for_extract)?;
+
+            #[cfg(target_os = "windows")]
+            {
+                let mut archive = zip::ZipArchive::new(archive_file)
+                    .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+                archive.extract(&destination_for_extract)
+                    .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                let decoder = flate2::read::GzDecoder::new(archive_file);
+                let mut archive = tar::Archive::new(decoder);
+                archive.unpack(&destination_for_extract)?;
+            }
+
+            Ok(())
+        }).await.map_err(|error| {
+            LauncherError::Download(format!("Java runtime extraction task failed: {}", error))
+        })?;
+
+        if let Err(error) = extraction {
+            let _ = fs::remove_file(&archive_path).await;
+            return Err(LauncherError::Io(error));
+        }
+        fs::remove_file(&archive_path).await?;
+
+        find_java_executable(&dest_dir)
     }
 
     /// List all available Java installations (system + downloaded)
@@ -168,16 +204,14 @@ impl JavaManager {
         if runtimes_dir.exists() {
             let mut entries = fs::read_dir(&runtimes_dir).await?;
             while let Some(entry) = entries.next_entry().await? {
-                let java_exe = entry.path().join("bin").join(crate::java::detection::java_executable_name());
-                if java_exe.exists() {
-                    if let Ok(install) = crate::java::detection::parse_java_version(&java_exe).await {
-                        selections.push(JavaSelection {
-                            path: java_exe,
-                            version: install.version,
-                            major_version: install.major_version,
-                            source: JavaSource::Mojang,
-                        });
-                    }
+                let Ok(java_exe) = find_java_executable(&entry.path()) else { continue };
+                if let Ok(install) = crate::java::detection::parse_java_version(&java_exe).await {
+                    selections.push(JavaSelection {
+                        path: java_exe,
+                        version: install.version,
+                        major_version: install.major_version,
+                        source: JavaSource::Adoptium,
+                    });
                 }
             }
         }
@@ -191,4 +225,23 @@ impl Default for JavaManager {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Find the Java executable inside an extracted JDK archive. Adoptium archives
+/// contain a versioned top-level directory, so it is not always at root/bin.
+fn find_java_executable(root: &std::path::Path) -> Result<PathBuf> {
+    let executable_name = crate::java::detection::java_executable_name();
+    for entry in walkdir::WalkDir::new(root).follow_links(true) {
+        let entry = entry.map_err(|error| {
+            LauncherError::Io(std::io::Error::new(std::io::ErrorKind::Other, error))
+        })?;
+        if entry.file_name().to_string_lossy() == executable_name && entry.path().is_file() {
+            return Ok(entry.path().to_path_buf());
+        }
+    }
+
+    Err(LauncherError::JavaNotFound(format!(
+        "Java executable not found in {}",
+        root.display()
+    )))
 }
