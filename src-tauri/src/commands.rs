@@ -678,6 +678,7 @@ pub async fn launch_start(
 #[tauri::command]
 pub async fn launch_kill(
     state: State<'_, Arc<AppState>>,
+    app: AppHandle,
     instance_id: String,
 ) -> Result<()> {
     let instance_uuid = Uuid::parse_str(&instance_id)?;
@@ -688,7 +689,16 @@ pub async fn launch_kill(
     };
 
     if let Some(handle) = handle {
-        handle.kill().await?;
+        if handle.is_running().await {
+            let pid = handle.pid;
+            handle.kill().await?;
+            emit_launch_status(&app, LaunchStatusEvent {
+                instance_id,
+                status: LaunchStatus::Killed,
+                exit_code: None,
+                pid,
+            })?;
+        }
     }
 
     Ok(())
