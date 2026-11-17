@@ -103,7 +103,7 @@ export function Home() {
 
     eventManager.setupLaunchStatus((status) => {
       setLaunchStatus(status);
-      if (status.status === 'exited' || status.status === 'crashed') {
+      if (status.status === 'exited' || status.status === 'crashed' || status.status === 'killed') {
         setLaunching(false);
         if (status.status === 'crashed') {
           toast({
@@ -310,7 +310,8 @@ export function Home() {
           {/* Launch Button & Status */}
           <Card className={cn(selectedInstance && 'border-primary-500/30')}>
             <CardContent className="pt-0">
-              {currentLaunchStatus && currentLaunchStatus.status !== 'exited' ? (
+              {currentLaunchStatus &&
+              (currentLaunchStatus.status === 'starting' || currentLaunchStatus.status === 'running') ? (
                 <div className="space-y-4 p-6 text-center">
                   <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-500" />
                   <div>
