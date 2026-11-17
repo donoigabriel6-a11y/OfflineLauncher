@@ -20,6 +20,7 @@ impl LaunchArguments {
         account: &dyn Account,
         game_dir: &Path,
         assets_dir: &Path,
+        libraries_dir: &Path,
         assets_index: &str,
         natives_dir: &Path,
         classpath: &str,
@@ -30,6 +31,7 @@ impl LaunchArguments {
             account,
             game_dir,
             assets_dir,
+            libraries_dir,
             assets_index,
             natives_dir,
             classpath,
@@ -57,6 +59,7 @@ fn build_placeholders(
     account: &dyn Account,
     game_dir: &Path,
     assets_dir: &Path,
+    libraries_dir: &Path,
     assets_index: &str,
     natives_dir: &Path,
     classpath: &str,
@@ -73,6 +76,8 @@ fn build_placeholders(
     map.insert("version_name".to_string(), version_name.to_string());
     map.insert("game_directory".to_string(), game_dir.to_string_lossy().to_string());
     map.insert("assets_root".to_string(), assets_dir.to_string_lossy().to_string());
+    map.insert("library_directory".to_string(), libraries_dir.to_string_lossy().to_string());
+    map.insert("classpath_separator".to_string(), if cfg!(target_os = "windows") { ";".to_string() } else { ":".to_string() });
     map.insert("assets_index_name".to_string(), assets_index.to_string());
     map.insert("natives_directory".to_string(), natives_dir.to_string_lossy().to_string());
     map.insert("classpath".to_string(), classpath.to_string());
@@ -81,6 +86,8 @@ fn build_placeholders(
 
     // Additional placeholders used in newer versions
     map.insert("auth_session".to_string(), account.access_token().to_string());
+    map.insert("clientid".to_string(), "0".to_string());
+    map.insert("auth_xuid".to_string(), "0".to_string());
     map.insert("user_properties".to_string(), "{}".to_string()); // Empty JSON for offline
 
     map
@@ -102,9 +109,12 @@ fn parse_legacy_arguments(
     placeholders: &HashMap<String, String>,
 ) -> Result<(Vec<String>, Vec<String>)> {
     let args = minecraft_args.unwrap_or("");
-    let substituted = substitute_placeholders(args, placeholders);
-    let parsed = shell_words::split(&substituted)
-        .map_err(|e| LauncherError::Launch(format!("Failed to parse legacy arguments: {}", e)))?;
+    // Tokenize before substitution so paths containing spaces remain one argument.
+    let parsed = shell_words::split(args)
+        .map_err(|e| LauncherError::Launch(format!("Failed to parse legacy arguments: {}", e)))?
+        .into_iter()
+        .map(|argument| substitute_placeholders(&argument, placeholders))
+        .collect();
 
     // For legacy, all args are game args; JVM args are empty (handled separately)
     Ok((Vec::new(), parsed))
@@ -120,29 +130,18 @@ fn parse_argument_list(
     for arg in args {
         match arg {
             Argument::Simple(s) => {
-                let substituted = substitute_placeholders(s, placeholders);
-                // Split by spaces but respect quotes
-                let parts = shell_words::split(&substituted)
-                    .map_err(|e| LauncherError::Launch(format!("Failed to parse argument: {}", e)))?;
-                result.extend(parts);
+                // Each modern manifest entry is already one process argument.
+                result.push(substitute_placeholders(s, placeholders));
             }
             Argument::Conditional(cond) => {
                 // Evaluate rules
                 if evaluate_argument_rules(&cond.rules)? {
                     match &cond.value {
                         ArgumentValue::Single(s) => {
-                            let substituted = substitute_placeholders(s, placeholders);
-                            let parts = shell_words::split(&substituted)
-                                .map_err(|e| LauncherError::Launch(format!("Failed to parse conditional argument: {}", e)))?;
-                            result.extend(parts);
+                            result.push(substitute_placeholders(s, placeholders));
                         }
-                        ArgumentValue::Multiple(vec) => {
-                            for s in vec {
-                                let substituted = substitute_placeholders(s, placeholders);
-                                let parts = shell_words::split(&substituted)
-                                    .map_err(|e| LauncherError::Launch(format!("Failed to parse conditional argument: {}", e)))?;
-                                result.extend(parts);
-                            }
+                        ArgumentValue::Multiple(values) => {
+                            result.extend(values.iter().map(|value| substitute_placeholders(value, placeholders)));
                         }
                     }
                 }
@@ -175,6 +174,35 @@ pub fn substitute_placeholders(template: &str, placeholders: &HashMap<String, St
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn test_modern_arguments_keep_paths_with_spaces_as_single_values() {
+        let mut placeholders = HashMap::new();
+        placeholders.insert("game_directory".to_string(), "C:/Users/Test User/.minecraft".to_string());
+        let arguments = crate::versions::model::Arguments {
+            game: vec![
+                Argument::Simple("--gameDir".to_string()),
+                Argument::Simple("${game_directory}".to_string()),
+            ],
+            jvm: vec![],
+        };
+
+        let (_, game_args) = parse_modern_arguments(&arguments, &placeholders).unwrap();
+        assert_eq!(game_args, vec!["--gameDir", "C:/Users/Test User/.minecraft"]);
+    }
+
+    #[test]
+    fn test_legacy_arguments_keep_paths_with_spaces_as_single_values() {
+        let mut placeholders = HashMap::new();
+        placeholders.insert("game_directory".to_string(), "C:/Users/Test User/.minecraft".to_string());
+
+        let (_, game_args) = parse_legacy_arguments(
+            Some("--gameDir ${game_directory} --username Steve"),
+            &placeholders,
+        ).unwrap();
+
+        assert_eq!(game_args, vec!["--gameDir", "C:/Users/Test User/.minecraft", "--username", "Steve"]);
+    }
 
     #[test]
     fn test_substitute_placeholders() {
