@@ -252,9 +252,10 @@ export function Versions() {
                                 <div
                                   className="h-full bg-primary-500 transition-all duration-300"
                                   style={{
-                                    width: progress && progress.total > 0
-                                      ? `${Math.round((progress.downloaded / progress.total) * 100)}%`
-                                      : '0%',
+                                    width:
+                                      progress && progress.total > 0
+                                        ? `${Math.round((progress.downloaded / progress.total) * 100)}%`
+                                        : '0%',
                                   }}
                                 />
                               </div>
