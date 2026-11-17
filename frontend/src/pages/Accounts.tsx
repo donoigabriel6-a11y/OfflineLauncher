@@ -53,25 +53,28 @@ export function Accounts() {
     return () => eventManager.cleanup();
   }, [setAccounts, toast]);
 
-  const validateUsername = (username: string): boolean => {
+  // Keep validation pure so it is safe to use while rendering button states.
+  const getUsernameError = (username: string, excludedAccountId?: string): string => {
     if (username.length < 3 || username.length > 16) {
-      setUsernameError('Username must be 3-16 characters');
-      return false;
+      return 'Username must be 3-16 characters';
     }
     if (!/^[A-Za-z0-9_]+$/.test(username)) {
-      setUsernameError('Username can only contain letters, numbers, and underscores');
-      return false;
+      return 'Username can only contain letters, numbers, and underscores';
     }
-    // Check if username already exists (excluding the one being edited)
+
     const exists = accounts.some(
-      (a) => a.username.toLowerCase() === username.toLowerCase() && a.id !== editingAccount?.id
+      (account) =>
+        account.username.toLowerCase() === username.toLowerCase() &&
+        account.id !== excludedAccountId
     );
-    if (exists) {
-      setUsernameError('Username already exists');
-      return false;
-    }
-    setUsernameError('');
-    return true;
+    return exists ? 'Username already exists' : '';
+  };
+
+  // State updates happen only in event handlers, never during render.
+  const validateUsername = (username: string): boolean => {
+    const error = getUsernameError(username, editingAccount?.id);
+    setUsernameError(error);
+    return error.length === 0;
   };
 
   const handleCreate = async () => {
@@ -283,7 +286,7 @@ export function Accounts() {
             >
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!validateUsername(newUsername)}>
+            <Button onClick={handleCreate} disabled={!!getUsernameError(newUsername)}>
               Create Account
             </Button>
           </div>
@@ -327,7 +330,7 @@ export function Accounts() {
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={!validateUsername(editUsername)}>
+            <Button onClick={handleUpdate} disabled={!!getUsernameError(editUsername, editingAccount?.id)}>
               Save Changes
             </Button>
           </div>
