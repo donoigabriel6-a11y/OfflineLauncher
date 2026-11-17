@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::{
-    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson, AssetIndexObject,
+    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson,
     DownloadStage,
     JavaInstallation, JavaSelection,
     Instance,
@@ -15,17 +15,17 @@ use crate::{
     fetch_quilt_versions, fetch_quilt_loader_versions,
     Result, LauncherError,
 };
-use reqwest::StatusCode;
 use tracing::{error, info};
 use crate::accounts::model::validate_username;
 use crate::accounts::uuid::generate_offline_uuid;
 use crate::app_dirs::get_app_data_dir;
 use crate::events::{
     emit_download_progress, emit_download_complete,
-    emit_account_changed, emit_instance_changed,
+    emit_account_changed, emit_instance_changed, emit_launch_status,
     DownloadProgressEvent, DownloadCompleteEvent,
     AccountChangedEvent, AccountAction, AccountInfo,
     InstanceChangedEvent, InstanceAction, InstanceInfo,
+    LaunchStatusEvent, LaunchStatus,
 };
 use crate::versions::inheritance::load_version_json;
 use crate::versions::manifest::fetch_version_manifest;
