@@ -15,6 +15,8 @@ use crate::{
     fetch_quilt_versions, fetch_quilt_loader_versions,
     Result, LauncherError,
 };
+use reqwest::StatusCode;
+use tracing::{error, info, warn};
 use crate::accounts::model::validate_username;
 use crate::accounts::uuid::generate_offline_uuid;
 use crate::app_dirs::get_app_data_dir;
@@ -252,6 +254,7 @@ pub async fn versions_download(
     // 1. Client jar
     {
         let client_download = &version_json.downloads.client;
+        info!("Downloading client jar: {} -> {}", client_download.url, version_dir.join(format!("{}.jar", version_id)).display());
         let client_jar_path = version_dir.join(format!("{}.jar", version_id));
         download_tasks.push(crate::downloads::DownloadTask {
             url: client_download.url.clone(),
@@ -264,6 +267,7 @@ pub async fn versions_download(
     }
 
     // 2. Libraries (filter by platform rules)
+    let mut library_count = 0;
     for library in &version_json.libraries {
         if !crate::versions::library::evaluate_library_rules(&library.rules, true).unwrap_or(true) {
             continue;
@@ -273,6 +277,7 @@ pub async fn versions_download(
             // Main artifact
             if let Some(artifact) = &downloads.artifact {
                 let artifact_path = crate::launch::classpath::library_artifact_path(library, &libraries_dir)?;
+                library_count += 1;
                 download_tasks.push(crate::downloads::DownloadTask {
                     url: artifact.url.clone(),
                     destination: artifact_path,
@@ -287,6 +292,7 @@ pub async fn versions_download(
             if let Some(classifiers) = &downloads.classifiers {
                 for (classifier, download_info) in classifiers {
                     let path = crate::launch::classpath::library_native_path(library, &libraries_dir, classifier)?;
+                    library_count += 1;
                     download_tasks.push(crate::downloads::DownloadTask {
                         url: download_info.url.clone(),
                         destination: path,
@@ -299,9 +305,11 @@ pub async fn versions_download(
             }
         }
     }
+    info!("Queued {} library downloads", library_count);
 
     // 3. Assets index
     let asset_index_path = assets_dir.join("indexes").join(format!("{}.json", version_json.asset_index.id));
+    info!("Downloading assets index: {} -> {}", version_json.asset_index.url, asset_index_path.display());
     download_tasks.push(crate::downloads::DownloadTask {
         url: version_json.asset_index.url.clone(),
         destination: asset_index_path,
@@ -313,6 +321,7 @@ pub async fn versions_download(
 
     // Execute all downloads
     let download_manager = state.download_manager.clone();
+    info!("Starting {} download tasks", download_tasks.len());
     let results = download_manager.download_all(download_tasks, Some(&app)).await;
 
     // Handle results
@@ -323,16 +332,32 @@ pub async fn versions_download(
             let asset_index_path = assets_dir.join("indexes").join(format!("{}.json", version_json.asset_index.id));
 
             // Read the downloaded asset index
-            let asset_index_content = tokio::fs::read_to_string(&asset_index_path).await
-                .map_err(|e| LauncherError::Io(e))?;
+            let asset_index_content = match tokio::fs::read_to_string(&asset_index_path).await {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Failed to read asset index file: {}", e);
+                    return Err(LauncherError::Io(e));
+                }
+            };
 
-            let asset_index: serde_json::Value = serde_json::from_str(&asset_index_content)
-                .map_err(|e| LauncherError::Serde(e))?;
+            let asset_index: serde_json::Value = match serde_json::from_str(&asset_index_content) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Failed to parse asset index JSON: {}", e);
+                    return Err(LauncherError::Serde(e));
+                }
+            };
 
             // Parse asset objects
-            let objects = asset_index.get("objects")
-                .and_then(|v| v.as_object())
-                .ok_or_else(|| LauncherError::Launch("Invalid assets index: missing objects".into()))?;
+            let objects = match asset_index.get("objects").and_then(|v| v.as_object()) {
+                Some(obj) => obj,
+                None => {
+                    error!("Invalid assets index: missing objects");
+                    return Err(LauncherError::Launch("Invalid assets index: missing objects".into()));
+                }
+            };
+
+            info!("Found {} assets to download", objects.len());
 
             // Create download tasks for each asset
             let mut asset_tasks = Vec::new();
@@ -368,9 +393,12 @@ pub async fn versions_download(
                 let download_manager = state.download_manager.clone();
 
                 // Download in batches to avoid too many concurrent downloads
+                info!("Downloading {} assets in batches of 50", asset_tasks.len());
                 for chunk in asset_tasks.chunks(50) {
                     let chunk_vec = chunk.to_vec();
-                    let _ = download_manager.download_all(chunk_vec, Some(&app)).await;
+                    if let Err(e) = download_manager.download_all(chunk_vec, Some(&app)).await {
+                        warn!("Asset batch download error (continuing): {}", e);
+                    }
                 }
             }
 
@@ -382,6 +410,7 @@ pub async fn versions_download(
             Ok(())
         }
         Err(e) => {
+            error!("Download failed: {}", e);
             emit_download_complete(&app, DownloadCompleteEvent {
                 version_id: version_id.clone(),
                 success: false,
