@@ -46,15 +46,7 @@ pub fn build_classpath(
 
 /// Get the path to a library artifact
 pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<PathBuf> {
-    // Parse library name: "group:artifact:version"
-    let parts: Vec<&str> = library.name.split(':').collect();
-    if parts.len() != 3 {
-        return Err(LauncherError::Launch(format!(
-            "Invalid library name format: {}",
-            library.name
-        )));
-    }
-
+    // Prefer the exact Maven-relative path supplied by Mojang.
     if let Some(path) = library.downloads.as_ref()
         .and_then(|downloads| downloads.artifact.as_ref())
         .and_then(|artifact| artifact.path.as_deref())
@@ -62,6 +54,14 @@ pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<
         return library_download_path(libraries_dir, path);
     }
 
+    // Fall back to Maven coordinates when the manifest omits `path`.
+    let parts: Vec<&str> = library.name.split(':').collect();
+    if parts.len() != 3 {
+        return Err(LauncherError::Launch(format!(
+            "Invalid library name format: {}",
+            library.name
+        )));
+    }
     let (group, artifact, version) = (parts[0], parts[1], parts[2]);
     let group_path = group.replace('.', "/");
 
@@ -95,14 +95,38 @@ pub async fn extract_natives(
         }
 
         // Check if library has natives for current platform
-        let classifier = crate::versions::library::get_native_classifier();
-        let Some(classifier) = classifier else { continue };
+        let Some(natives_map) = &library.natives else { continue };
+        let Some(classifiers) = library.downloads.as_ref().and_then(|downloads| downloads.classifiers.as_ref()) else {
+            continue;
+        };
 
-        if let Some(natives_map) = &library.natives {
-            // The `natives` map stores platform keys mapped to classifier names.
-            // Match the classifier value (for example `natives-windows`).
-            if let Some(native_classifier) = natives_map.values().find(|value| *value == &classifier) {
-                let artifact_path = library_native_path(library, libraries_dir, native_classifier)?;
+        // Mojang maps the current platform key to a classifier name. Older
+        // manifests may use `${arch}` in that name (32/64).
+        #[cfg(target_os = "windows")]
+        let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
+            &["windows-arm64", "windows"]
+        } else { &["windows"] };
+        #[cfg(target_os = "macos")]
+        let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
+            &["osx-arm64", "osx"]
+        } else { &["osx"] };
+        #[cfg(target_os = "linux")]
+        let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
+            &["linux-aarch64", "linux"]
+        } else if cfg!(target_arch = "arm") {
+            &["linux-arm", "linux"]
+        } else { &["linux"] };
+        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+        let platform_keys: &[&str] = &[];
+
+        let arch = if cfg!(target_pointer_width = "64") { "64" } else { "32" };
+        let native_classifier = platform_keys.iter()
+            .find_map(|key| natives_map.get(*key))
+            .map(|classifier| classifier.replace("${arch}", arch));
+
+        if let Some(native_classifier) = native_classifier {
+            if classifiers.contains_key(&native_classifier) {
+                let artifact_path = library_native_path(library, libraries_dir, &native_classifier)?;
                 if artifact_path.exists() {
                     extract_native_jar(&artifact_path, natives_dir, library.extract.as_ref()).await?;
                 }
@@ -136,14 +160,6 @@ pub fn library_native_path(
     libraries_dir: &Path,
     classifier: &str,
 ) -> Result<PathBuf> {
-    let parts: Vec<&str> = library.name.split(':').collect();
-    if parts.len() != 3 {
-        return Err(LauncherError::Launch(format!(
-            "Invalid library name format: {}",
-            library.name
-        )));
-    }
-
     if let Some(path) = library.downloads.as_ref()
         .and_then(|downloads| downloads.classifiers.as_ref())
         .and_then(|classifiers| classifiers.get(classifier))
@@ -152,6 +168,13 @@ pub fn library_native_path(
         return library_download_path(libraries_dir, path);
     }
 
+    let parts: Vec<&str> = library.name.split(':').collect();
+    if parts.len() != 3 {
+        return Err(LauncherError::Launch(format!(
+            "Invalid library name format: {}",
+            library.name
+        )));
+    }
     let (group, artifact, version) = (parts[0], parts[1], parts[2]);
     let group_path = group.replace('.', "/");
 
