@@ -15,8 +15,7 @@ import { Download, RefreshCw, Filter, Loader2, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Versions() {
-  const { versions, setVersions, versionFilter, setVersionFilter, downloads, selectedVersionId } =
-    useStore();
+  const { versions, setVersions, versionFilter, setVersionFilter, downloads } = useStore();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -111,9 +110,6 @@ export function Versions() {
       return b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [filteredVersions]);
-
-  const downloadProgress = selectedVersionId ? downloads.get(selectedVersionId) : null;
-  const isDownloading = downloadProgress && downloadProgress.stage !== 'complete';
 
   const typeLabels: Record<string, string> = {
     release: 'Release',
@@ -284,7 +280,7 @@ export function Versions() {
                             >
                               Open
                             </Button>
-                          ) : isDownloading ? (
+                          ) : isCurrentDownload ? (
                             <Button variant="ghost" size="sm" disabled>
                               <Loader2 className="h-4 w-4 animate-spin" />
                             </Button>
