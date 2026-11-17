@@ -162,7 +162,7 @@ mod tests {
             arguments: Arguments { game: vec![], jvm: vec![] },
             minecraft_arguments: None,
             downloads: Downloads {
-                client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0 },
+                client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None },
                 server: None,
                 server_mappings: None,
             },
