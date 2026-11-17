@@ -188,7 +188,7 @@ mod tests {
         };
 
         let (_, game_args) = parse_modern_arguments(&arguments, &placeholders).unwrap();
-        assert_eq!(game_args, vec!["--gameDir", "C:/Users/Test User/.minecraft"]);
+        assert_eq!(game_args, vec!["--gameDir".to_string(), "C:/Users/Test User/.minecraft".to_string()]);
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod tests {
             &placeholders,
         ).unwrap();
 
-        assert_eq!(game_args, vec!["--gameDir", "C:/Users/Test User/.minecraft", "--username", "Steve"]);
+        assert_eq!(game_args, vec!["--gameDir".to_string(), "C:/Users/Test User/.minecraft".to_string(), "--username".to_string(), "Steve".to_string()]);
     }
 
     #[test]
