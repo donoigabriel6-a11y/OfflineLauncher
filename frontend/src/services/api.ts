@@ -35,17 +35,20 @@ export const configApi = {
 // Accounts
 export const accountsApi = {
   list: () => handleTauriError(invoke<Account[]>('accounts_list')),
-  create: (username: string) => handleTauriError(invoke<Account>('accounts_create', { username })),
+  create: (username: string) =>
+    handleTauriError(invoke<Account>('accounts_create', { username })),
   update: (id: string, username?: string, skinPath?: string) =>
     handleTauriError(invoke<Account>('accounts_update', { id, username, skinPath })),
   delete: (id: string) => handleTauriError(invoke('accounts_delete', { id })),
-  generateUuid: (username: string) => handleTauriError(invoke<string>('accounts_generate_uuid', { username })),
+  generateUuid: (username: string) =>
+    handleTauriError(invoke<string>('accounts_generate_uuid', { username })),
 };
 
 // Versions
 export const versionsApi = {
   fetchManifest: () => handleTauriError(invoke<VersionManifest>('versions_fetch_manifest')),
-  list: (versionType?: string) => handleTauriError(invoke<VersionEntry[]>('versions_list', { versionType })),
+  list: (versionType?: string) =>
+    handleTauriError(invoke<VersionEntry[]>('versions_list', { versionType })),
   download: (versionId: string) => handleTauriError(invoke('versions_download', { versionId })),
   getVersionJson: (versionId: string) =>
     handleTauriError(invoke<VersionJson>('versions_get_version_json', { versionId })),
@@ -64,9 +67,11 @@ export const instancesApi = {
   list: () => handleTauriError(invoke<Instance[]>('instances_list')),
   create: (name: string, versionId: string) =>
     handleTauriError(invoke<Instance>('instances_create', { name, versionId })),
-  update: (instance: Instance) => handleTauriError(invoke<Instance>('instances_update', { instance })),
+  update: (instance: Instance) =>
+    handleTauriError(invoke<Instance>('instances_update', { instance })),
   delete: (id: string) => handleTauriError(invoke('instances_delete', { id })),
-  clone: (id: string, newName: string) => handleTauriError(invoke<Instance>('instances_clone', { id, newName })),
+  clone: (id: string, newName: string) =>
+    handleTauriError(invoke<Instance>('instances_clone', { id, newName })),
   openFolder: (id: string) => handleTauriError(invoke('instances_open_folder', { id })),
 };
 
