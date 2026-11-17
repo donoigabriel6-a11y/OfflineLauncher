@@ -239,8 +239,53 @@ async fn extract_native_jar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::versions::model::Library;
+    use crate::versions::model::{DownloadInfo, Library, LibraryDownloads};
     use std::path::PathBuf;
+
+    #[test]
+    fn test_library_artifact_path_uses_manifest_path() {
+        let library = Library {
+            name: "com.example:test-lib:1.0.0".to_string(),
+            downloads: Some(LibraryDownloads {
+                artifact: Some(DownloadInfo {
+                    url: "https://example.invalid/test.jar".to_string(),
+                    sha1: "0000000000000000000000000000000000000000".to_string(),
+                    size: 1,
+                    path: Some("custom/repository/test-lib.jar".to_string()),
+                }),
+                classifiers: None,
+            }),
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+
+        let path = library_artifact_path(&library, Path::new("/libraries")).unwrap();
+        assert_eq!(path, PathBuf::from("/libraries/custom/repository/test-lib.jar"));
+    }
+
+    #[test]
+    fn test_library_artifact_path_rejects_parent_traversal() {
+        let library = Library {
+            name: "com.example:test-lib:1.0.0".to_string(),
+            downloads: Some(LibraryDownloads {
+                artifact: Some(DownloadInfo {
+                    url: "https://example.invalid/test.jar".to_string(),
+                    sha1: "0000000000000000000000000000000000000000".to_string(),
+                    size: 1,
+                    path: Some("../outside/test-lib.jar".to_string()),
+                }),
+                classifiers: None,
+            }),
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+
+        assert!(library_artifact_path(&library, Path::new("/libraries")).is_err());
+    }
 
     #[test]
     fn test_library_artifact_path() {
