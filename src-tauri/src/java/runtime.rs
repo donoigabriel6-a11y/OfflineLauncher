@@ -128,76 +128,79 @@ fn current_arch() -> &'static str {
     #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm", target_arch = "x86")))] return "unknown";
 }
 
-/// Fetch Adoptium Temurin releases as fallback
+/// Fetch the latest Adoptium JDK archive for the current platform.
 pub async fn fetch_adoptium_runtimes(client: &Client, major_version: u8) -> Result<Vec<JavaRuntime>> {
     let url = format!(
-        "https://api.adoptium.net/v3/assets/latest/{}/hotspot?architecture={}&os={}&vendor=eclipse",
+        "https://api.adoptium.net/v3/assets/latest/{}/hotspot?architecture={}&os={}&vendor=eclipse&image_type=jdk",
         major_version,
         current_arch(),
         current_os()
     );
 
     let response = client.get(&url).send().await
-        .map_err(|e| LauncherError::Http(e))?;
+        .map_err(LauncherError::Http)?;
 
     if !response.status().is_success() {
         return Ok(Vec::new());
     }
 
     #[derive(Deserialize)]
-    struct AdoptiumResponse {
-        #[serde(rename = "binary")]
-        binaries: Vec<AdoptiumBinary>,
-    }
-
-    #[derive(Deserialize)]
-    struct AdoptiumBinary {
-        #[serde(rename = "package")]
-        pkg: AdoptiumPackage,
-    }
-
-    #[derive(Deserialize)]
-    struct AdoptiumPackage {
-        #[serde(rename = "link")]
-        link: String,
-        #[serde(rename = "checksum")]
-        checksum: String,
-        #[serde(rename = "size")]
-        size: u64,
-        #[serde(rename = "version")]
+    struct AdoptiumAsset {
+        binary: AdoptiumBinary,
         version: AdoptiumVersion,
     }
 
     #[derive(Deserialize)]
-    struct AdoptiumVersion {
-        #[serde(rename = "major")]
-        major: u8,
-        #[serde(rename = "minor")]
-        minor: u32,
-        #[serde(rename = "security")]
-        security: u32,
-        #[serde(rename = "patch")]
-        patch: u32,
+    struct AdoptiumBinary {
+        package: AdoptiumPackage,
     }
 
-    let data: AdoptiumResponse = response.json().await
-        .map_err(|e| LauncherError::Http(e))?;
+    #[derive(Deserialize)]
+    struct AdoptiumPackage {
+        link: String,
+        size: u64,
+    }
 
-    let mut runtimes = Vec::new();
-    for binary in data.binaries {
-        let v = &binary.pkg.version;
-        let version_str = format!("{}.{}.{}.{}", v.major, v.minor, v.security, v.patch);
-        runtimes.push(JavaRuntime {
-            version: version_str,
-            major_version: v.major,
+    #[derive(Deserialize)]
+    struct AdoptiumVersion {
+        major: u8,
+        #[serde(default)]
+        minor: u32,
+        #[serde(default)]
+        security: u32,
+        #[serde(default)]
+        build: u32,
+        #[serde(default)]
+        openjdk_version: Option<String>,
+    }
+
+    let assets: Vec<AdoptiumAsset> = response.json().await
+        .map_err(LauncherError::Http)?;
+
+    let runtimes = assets.into_iter().map(|asset| {
+        let version = asset.version.openjdk_version.unwrap_or_else(|| {
+            format!(
+                "{}.{}.{}+{}",
+                asset.version.major,
+                asset.version.minor,
+                asset.version.security,
+                asset.version.build
+            )
+        });
+
+        JavaRuntime {
+            version,
+            major_version: asset.version.major,
             os: current_os().to_string(),
             arch: current_arch().to_string(),
-            url: binary.pkg.link,
-            sha1: binary.pkg.checksum,
-            size: binary.pkg.size,
+            url: asset.binary.package.link,
+            // Adoptium's package checksum is SHA-256, not SHA-1. Leave this
+            // empty rather than incorrectly validating it as SHA-1.
+            sha1: String::new(),
+            size: asset.binary.package.size,
             vendor: "adoptium".to_string(),
-        });
-    }
+        }
+    }).collect();
 
     Ok(runtimes)
 }
