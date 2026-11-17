@@ -62,7 +62,7 @@ export function Home() {
           instancesApi.list(),
           accountsApi.list(),
           javaApi.listRuntimes(),
-          versionsApi.fetchManifest().then(m => m.versions),
+          versionsApi.fetchManifest().then((manifest) => manifest.versions),
         ]);
         useStore.getState().setInstances(instancesData);
         useStore.getState().setAccounts(accountsData);
@@ -424,9 +424,14 @@ export function Home() {
             label="Minecraft Version"
             placeholder="Select version"
             options={versions
-              .filter(v => v.type === 'release' || v.type === 'snapshot')
-              .sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' }))
-              .map(v => ({ value: v.id, label: `${v.id} (${v.type})` }))}
+              .filter((version) => version.type === 'release' || version.type === 'snapshot')
+              .sort((a, b) =>
+                b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' })
+              )
+              .map((version) => ({
+                value: version.id,
+                label: `${version.id} (${version.type})`,
+              }))}
             value={newInstanceVersion}
             onChange={(e) => setNewInstanceVersion(e.target.value)}
           />
