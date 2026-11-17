@@ -336,6 +336,11 @@ pub async fn versions_download(
                 Ok(content) => content,
                 Err(e) => {
                     error!("Failed to read asset index file: {}", e);
+                    emit_download_complete(&app, DownloadCompleteEvent {
+                        version_id: version_id.clone(),
+                        success: false,
+                        error: Some(e.to_string()),
+                    })?;
                     return Err(LauncherError::Io(e));
                 }
             };
@@ -344,6 +349,11 @@ pub async fn versions_download(
                 Ok(v) => v,
                 Err(e) => {
                     error!("Failed to parse asset index JSON: {}", e);
+                    emit_download_complete(&app, DownloadCompleteEvent {
+                        version_id: version_id.clone(),
+                        success: false,
+                        error: Some(e.to_string()),
+                    })?;
                     return Err(LauncherError::Serde(e));
                 }
             };
@@ -353,7 +363,13 @@ pub async fn versions_download(
                 Some(obj) => obj,
                 None => {
                     error!("Invalid assets index: missing objects");
-                    return Err(LauncherError::Launch("Invalid assets index: missing objects".into()));
+                    let error = LauncherError::Launch("Invalid assets index: missing objects".into());
+                    emit_download_complete(&app, DownloadCompleteEvent {
+                        version_id: version_id.clone(),
+                        success: false,
+                        error: Some(error.to_string()),
+                    })?;
+                    return Err(error);
                 }
             };
 
@@ -366,13 +382,17 @@ pub async fn versions_download(
             for (asset_path, obj_value) in objects {
                 if let Some(obj) = obj_value.as_object() {
                     let hash = obj.get("hash").and_then(|v| v.as_str()).unwrap_or("");
-                    let size = obj.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
-
                     if hash.len() != 40 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-                        return Err(LauncherError::Launch(format!(
+                        let error = LauncherError::Launch(format!(
                             "Invalid SHA-1 hash for asset '{}': {}",
                             asset_path, hash
-                        )));
+                        ));
+                        emit_download_complete(&app, DownloadCompleteEvent {
+                            version_id: version_id.clone(),
+                            success: false,
+                            error: Some(error.to_string()),
+                        })?;
+                        return Err(error);
                     }
 
                     // Asset URL format: https://resources.download.minecraft.net/{first2}/{hash}
