@@ -15,7 +15,8 @@ import { Download, RefreshCw, Filter, Loader2, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Versions() {
-  const { versions, setVersions, versionFilter, setVersionFilter, downloads } = useStore();
+  const { versions, setVersions, versionFilter, setVersionFilter, downloads, selectedVersionId } =
+    useStore();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
