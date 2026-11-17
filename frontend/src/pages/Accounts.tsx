@@ -1,5 +1,5 @@
 // Accounts page
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { PageLayout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/Button';
