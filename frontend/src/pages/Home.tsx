@@ -130,6 +130,33 @@ export function Home() {
     setError(null);
 
     try {
+      // A newly-created instance may point to a version that has never been
+      // installed. Check its local metadata first and install the complete
+      // version (client, libraries, and assets) before trying to launch.
+      let versionReady = false;
+      try {
+        // The metadata file alone is not enough: an earlier download may have
+        // failed after writing it but before the client/assets were complete.
+        await versionsApi.getVersionJson(selectedInstance.versionId);
+        versionReady = await versionsApi.isInstalled(selectedInstance.versionId);
+      } catch {
+        versionReady = false;
+      }
+
+      if (!versionReady) {
+        toast({
+          type: 'info',
+          title: 'Installing Minecraft',
+          message: `Downloading Minecraft ${selectedInstance.versionId} before launch...`,
+        });
+        await versionsApi.download(selectedInstance.versionId);
+        // Confirm both metadata and the complete-install marker before launch.
+        await versionsApi.getVersionJson(selectedInstance.versionId);
+        if (!(await versionsApi.isInstalled(selectedInstance.versionId))) {
+          throw new Error(`Minecraft ${selectedInstance.versionId} did not finish installing`);
+        }
+      }
+
       await launchApi.start(selectedInstance.id, selectedAccount.id);
       toast({ type: 'success', title: 'Launching', message: 'Game is starting...' });
     } catch (error) {

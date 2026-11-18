@@ -49,6 +49,8 @@ export const versionsApi = {
   list: (versionType?: string) =>
     handleTauriError(invoke<VersionEntry[]>('versions_list', { versionType })),
   download: (versionId: string) => handleTauriError(invoke('versions_download', { versionId })),
+  isInstalled: (versionId: string) =>
+    handleTauriError(invoke<boolean>('versions_is_installed', { versionId })),
   getVersionJson: (versionId: string) =>
     handleTauriError(invoke<VersionJson>('versions_get_version_json', { versionId })),
 };

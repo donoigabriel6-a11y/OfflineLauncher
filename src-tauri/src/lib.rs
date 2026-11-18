@@ -114,6 +114,7 @@ pub fn run() {
             commands::versions_fetch_manifest,
             commands::versions_list,
             commands::versions_download,
+            commands::versions_is_installed,
             commands::versions_get_version_json,
             commands::java_detect,
             commands::java_list_runtimes,

@@ -206,6 +206,13 @@ pub async fn versions_download(
     app: AppHandle,
     version_id: String,
 ) -> Result<()> {
+    // A version is considered installed only after every required file has
+    // completed successfully. Clear the marker before retrying a partial install.
+    let install_dir = crate::app_dirs::get_version_dir(&version_id)?;
+    tokio::fs::create_dir_all(&install_dir).await?;
+    let install_marker = install_dir.join(".installed");
+    let _ = tokio::fs::remove_file(&install_marker).await;
+
     let manifest = fetch_version_manifest(&state.http_client).await?;
 
     let version_entry = manifest.versions.iter()
@@ -227,8 +234,25 @@ pub async fn versions_download(
         )));
     }
 
-    let version_json: VersionJson = response.json().await
-        .map_err(|e| LauncherError::Http(e))?;
+    let version_body = response.bytes().await
+        .map_err(|e| LauncherError::Download(format!(
+            "Failed reading Minecraft {} metadata from {}: {}",
+            version_id, version_entry.url, e
+        )))?;
+    let version_json: VersionJson = serde_json::from_slice(&version_body)
+        .map_err(|e| LauncherError::Download(format!(
+            "Minecraft {} returned invalid version metadata from {}: {}. Response begins: {}",
+            version_id,
+            version_entry.url,
+            e,
+            String::from_utf8_lossy(&version_body[..version_body.len().min(240)])
+        )))?;
+    if version_json.id != version_id {
+        return Err(LauncherError::Download(format!(
+            "Mojang metadata ID mismatch: requested {}, received {}",
+            version_id, version_json.id
+        )));
+    }
 
     // Save version JSON
     let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
@@ -434,6 +458,9 @@ pub async fn versions_download(
                 }
             }
 
+            // Write the completion marker only after the client, libraries,
+            // asset index, and all asset objects have been downloaded and verified.
+            tokio::fs::write(&install_marker, b"installed").await?;
             emit_download_complete(&app, DownloadCompleteEvent {
                 version_id: version_id.clone(),
                 success: true,
@@ -451,6 +478,12 @@ pub async fn versions_download(
             Err(e)
         }
     }
+}
+
+#[tauri::command]
+pub async fn versions_is_installed(version_id: String) -> Result<bool> {
+    let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
+    Ok(tokio::fs::metadata(version_dir.join(".installed")).await.is_ok())
 }
 
 #[tauri::command]
