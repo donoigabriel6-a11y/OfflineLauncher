@@ -355,4 +355,42 @@ mod tests {
         let result = substitute_placeholders("${x} ${x} ${x}", &placeholders);
         assert_eq!(result, "y y y");
     }
+
+    #[test]
+    fn test_deduplicate_gc_flags_keeps_last() {
+        let mut args = vec![
+            "-XX:+UseG1GC".to_string(),
+            "-Xms512m".to_string(),
+            "-XX:+UseZGC".to_string(),
+            "-Xmx2G".to_string(),
+        ];
+        deduplicate_gc_flags(&mut args);
+        // Should keep last GC flag (UseZGC) and remove the first (UseG1GC)
+        assert_eq!(args, vec!["-Xms512m".to_string(), "-XX:+UseZGC".to_string(), "-Xmx2G".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_gc_flags_multiple_duplicates() {
+        let mut args = vec![
+            "-XX:+UseG1GC".to_string(),
+            "-XX:+UseZGC".to_string(),
+            "-XX:+UseG1GC".to_string(),
+            "-XX:+UseShenandoahGC".to_string(),
+        ];
+        deduplicate_gc_flags(&mut args);
+        // Should keep last of each: UseZGC, UseG1GC, UseShenandoahGC
+        assert_eq!(args, vec!["-XX:+UseZGC".to_string(), "-XX:+UseG1GC".to_string(), "-XX:+UseShenandoahGC".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_gc_flags_no_duplicates() {
+        let mut args = vec![
+            "-XX:+UseG1GC".to_string(),
+            "-Xms512m".to_string(),
+            "-Xmx2G".to_string(),
+        ];
+        deduplicate_gc_flags(&mut args);
+        // Should remain unchanged
+        assert_eq!(args, vec!["-XX:+UseG1GC".to_string(), "-Xms512m".to_string(), "-Xmx2G".to_string()]);
+    }
 }
