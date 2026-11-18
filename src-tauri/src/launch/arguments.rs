@@ -1,6 +1,6 @@
 //! Launch argument parsing and placeholder substitution
 
-use crate::accounts::model::Account;
+use crate::accounts::model::{Account, AccountType};
 use crate::error::{LauncherError, Result};
 use crate::versions::model::{VersionJson, Argument, ArgumentValue};
 use std::collections::HashMap;
@@ -89,6 +89,12 @@ fn build_placeholders(
     map.insert("clientid".to_string(), "0".to_string());
     map.insert("auth_xuid".to_string(), "0".to_string());
     map.insert("user_properties".to_string(), "{}".to_string()); // Empty JSON for offline
+
+    // For offline accounts, use "msa" user type to avoid demo mode
+    // The launcher will override the user_type placeholder if account is offline
+    if account.account_type() == AccountType::Offline {
+        map.insert("user_type".to_string(), "msa".to_string());
+    }
 
     map
 }
