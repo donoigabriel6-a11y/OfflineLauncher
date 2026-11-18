@@ -12,7 +12,11 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JavaInstallation {
+    /// The Java home directory (e.g., C:\Program Files\Java\jdk-21)
     pub path: PathBuf,
+    /// The actual executable path that was validated (e.g., C:\Program Files\Java\jdk-21\bin\java.exe)
+    /// This is used directly for launching instead of reconstructing the path
+    pub executable_path: PathBuf,
     pub version: String,
     pub major_version: u8,
     pub vendor: String,
@@ -146,6 +150,7 @@ pub(crate) async fn parse_java_version(java_exe: &Path) -> Result<JavaInstallati
 
     Ok(JavaInstallation {
         path,
+        executable_path: java_exe.to_path_buf(),
         version,
         major_version: major,
         vendor,

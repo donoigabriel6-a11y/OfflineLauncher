@@ -50,7 +50,7 @@ impl JavaManager {
                 let install = crate::java::detection::parse_java_version(path).await?;
                 if install.major_version >= required_major {
                     return Ok(JavaSelection {
-                        path: path.to_path_buf(),
+                        path: install.executable_path.clone(),
                         version: install.version,
                         major_version: install.major_version,
                         source: JavaSource::Custom,
@@ -63,7 +63,7 @@ impl JavaManager {
         let system_java = detect_system_java().await?;
         if let Some(install) = find_java_for_version(&system_java, required_major) {
             return Ok(JavaSelection {
-                path: install.path.join("bin").join(crate::java::detection::java_executable_name()),
+                path: install.executable_path.clone(),
                 version: install.version.clone(),
                 major_version: install.major_version,
                 source: JavaSource::System,
@@ -192,7 +192,7 @@ impl JavaManager {
         // System
         for install in detect_system_java().await? {
             selections.push(JavaSelection {
-                path: install.path.join("bin").join(crate::java::detection::java_executable_name()),
+                path: install.executable_path.clone(),
                 version: install.version,
                 major_version: install.major_version,
                 source: JavaSource::System,
@@ -207,7 +207,7 @@ impl JavaManager {
                 let Ok(java_exe) = find_java_executable(&entry.path()) else { continue };
                 if let Ok(install) = crate::java::detection::parse_java_version(&java_exe).await {
                     selections.push(JavaSelection {
-                        path: java_exe,
+                        path: install.executable_path.clone(),
                         version: install.version,
                         major_version: install.major_version,
                         source: JavaSource::Adoptium,
