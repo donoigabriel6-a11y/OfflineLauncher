@@ -709,6 +709,16 @@ pub async fn launch_start(
 
     // Combine JVM args
     let mut jvm_args = launch_args.jvm_args;
+
+    // Add config default JVM args
+    let config = state.config.read().await;
+    jvm_args.extend(
+        config.default_jvm_args
+            .split_whitespace()
+            .map(String::from)
+    );
+    drop(config);
+
     jvm_args.extend(
         instance.java.jvm_args
             .split_whitespace()
