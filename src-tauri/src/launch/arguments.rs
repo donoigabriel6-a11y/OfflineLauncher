@@ -233,10 +233,11 @@ pub fn substitute_placeholders(template: &str, placeholders: &HashMap<String, St
     result
 }
 
-/// Deduplicate GC flags - keep only the last occurrence of each GC algorithm
+/// Deduplicate GC flags - keep only the LAST GC flag overall
 /// to avoid "Multiple garbage collectors selected" error
+/// Java only allows ONE garbage collector to be selected
 pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
-    // GC flags that conflict with each other
+    // GC flags that conflict with each other (mutually exclusive)
     let gc_flags = [
         "-XX:+UseG1GC",
         "-XX:+UseZGC",
@@ -246,35 +247,37 @@ pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
         "-XX:+UseConcMarkSweepGC",
     ];
 
-    // Track the last index of each GC flag
-    let mut last_index: std::collections::HashMap<&'static str, usize> = std::collections::HashMap::new();
+    // Find the index of the LAST GC flag in the entire argument list
+    let mut last_gc_index: Option<usize> = None;
 
-    // Find the last occurrence of each GC flag
     for (i, arg) in args.iter().enumerate() {
         for gc in &gc_flags {
             if arg.starts_with(gc) {
-                last_index.insert(*gc, i);
+                last_gc_index = Some(i);
                 break;
             }
         }
     }
 
-    // Collect indices to remove (all but the last occurrence of each GC flag)
-    let mut indices_to_remove = Vec::new();
-    for (i, arg) in args.iter().enumerate() {
-        for gc in &gc_flags {
-            if arg.starts_with(gc) {
-                if last_index.get(gc) != Some(&i) {
+    // If we found at least one GC flag, remove ALL others
+    if let Some(keep_index) = last_gc_index {
+        let mut indices_to_remove = Vec::new();
+        for (i, arg) in args.iter().enumerate() {
+            if i == keep_index {
+                continue;
+            }
+            for gc in &gc_flags {
+                if arg.starts_with(gc) {
                     indices_to_remove.push(i);
+                    break;
                 }
-                break;
             }
         }
-    }
 
-    // Remove duplicate GC flags (from end to start to preserve indices)
-    for &idx in indices_to_remove.iter().rev() {
-        args.remove(idx);
+        // Remove duplicate GC flags (from end to start to preserve indices)
+        for &idx in indices_to_remove.iter().rev() {
+            args.remove(idx);
+        }
     }
 }
 
@@ -365,7 +368,7 @@ mod tests {
             "-Xmx2G".to_string(),
         ];
         deduplicate_gc_flags(&mut args);
-        // Should keep last GC flag (UseZGC) and remove the first (UseG1GC)
+        // Should keep ONLY the last GC flag (UseZGC) and remove all others
         assert_eq!(args, vec!["-Xms512m".to_string(), "-XX:+UseZGC".to_string(), "-Xmx2G".to_string()]);
     }
 
@@ -378,8 +381,8 @@ mod tests {
             "-XX:+UseShenandoahGC".to_string(),
         ];
         deduplicate_gc_flags(&mut args);
-        // Should keep last of each: UseZGC, UseG1GC, UseShenandoahGC
-        assert_eq!(args, vec!["-XX:+UseZGC".to_string(), "-XX:+UseG1GC".to_string(), "-XX:+UseShenandoahGC".to_string()]);
+        // Should keep ONLY the very last GC flag (UseShenandoahGC)
+        assert_eq!(args, vec!["-XX:+UseShenandoahGC".to_string()]);
     }
 
     #[test]
@@ -390,7 +393,18 @@ mod tests {
             "-Xmx2G".to_string(),
         ];
         deduplicate_gc_flags(&mut args);
-        // Should remain unchanged
+        // Should remain unchanged (only one GC flag)
         assert_eq!(args, vec!["-XX:+UseG1GC".to_string(), "-Xms512m".to_string(), "-Xmx2G".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_gc_flags_no_gc_flags() {
+        let mut args = vec![
+            "-Xms512m".to_string(),
+            "-Xmx2G".to_string(),
+        ];
+        deduplicate_gc_flags(&mut args);
+        // Should remain unchanged
+        assert_eq!(args, vec!["-Xms512m".to_string(), "-Xmx2G".to_string()]);
     }
 }
