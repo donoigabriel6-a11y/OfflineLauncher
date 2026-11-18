@@ -159,7 +159,7 @@ mod tests {
             },
             assets: "1.20".to_string(),
             libraries: vec![],
-            arguments: Arguments { game: vec![], jvm: vec![] },
+            arguments: Arguments { game: vec![], jvm: vec![], default_user_jvm: vec![] },
             minecraft_arguments: None,
             downloads: Downloads {
                 client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None },
