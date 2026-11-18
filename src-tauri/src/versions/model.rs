@@ -215,7 +215,9 @@ pub enum Argument {
 pub struct ConditionalArgument {
     // Newer Mojang metadata can omit rules when an argument is unconditional.
     #[serde(default)]
-    pub rules: Vec<LibraryRule>,
+    // Keep Mojang's rule payload flexible: new OS labels and rule fields must not
+    // make the whole untagged Argument fail to deserialize.
+    pub rules: Vec<serde_json::Value>,
     pub value: ArgumentValue,
 }
 

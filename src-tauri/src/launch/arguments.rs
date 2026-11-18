@@ -156,10 +156,69 @@ fn parse_argument_list(
     Ok(result)
 }
 
-/// Evaluate argument rules (reuse library rules logic)
-/// For conditional arguments, default to false (only include if explicitly allowed)
-fn evaluate_argument_rules(rules: &[crate::versions::model::LibraryRule]) -> Result<bool> {
-    crate::versions::library::evaluate_library_rules(rules, false)
+/// Evaluate Mojang argument rules without coupling argument deserialization to
+/// the stricter library-rule schema. Mojang can add OS labels and fields over time.
+fn evaluate_argument_rules(rules: &[serde_json::Value]) -> Result<bool> {
+    if rules.is_empty() {
+        return Ok(false);
+    }
+
+    let current_os = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "osx"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        std::env::consts::OS
+    };
+    let current_arch = std::env::consts::ARCH;
+    let mut allowed = false;
+
+    for rule in rules {
+        let Some(action) = rule.get("action").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+
+        let os_matches = match rule.get("os") {
+            None | Some(serde_json::Value::Null) => true,
+            Some(os) => {
+                let name_matches = os.get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .map(|name| name == current_os)
+                    .unwrap_or(true);
+                let arch_matches = os.get("arch")
+                    .and_then(serde_json::Value::as_str)
+                    .map(|arch| {
+                        let normalized = match arch {
+                            "x86_64" | "amd64" | "x64" => "x86_64",
+                            "aarch64" | "arm64" => "aarch64",
+                            "x86" | "i386" | "i686" => "x86",
+                            other => other,
+                        };
+                        let actual = match current_arch {
+                            "x86_64" => "x86_64",
+                            "aarch64" => "aarch64",
+                            "x86" => "x86",
+                            other => other,
+                        };
+                        normalized == actual
+                    })
+                    .unwrap_or(true);
+                name_matches && arch_matches
+            }
+        };
+
+        if os_matches {
+            match action {
+                "allow" => allowed = true,
+                "disallow" => allowed = false,
+                _ => {}
+            }
+        }
+    }
+
+    Ok(allowed)
 }
 
 /// Substitute all ${placeholder} occurrences in a string
