@@ -246,22 +246,28 @@ pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
         "-XX:+UseConcMarkSweepGC",
     ];
 
-    let mut seen_gc = std::collections::HashSet::new();
-    let mut indices_to_remove = Vec::new();
+    // Track the last index of each GC flag
+    let mut last_index: std::collections::HashMap<&'static str, usize> = std::collections::HashMap::new();
 
-    // Find all GC flags and mark earlier ones for removal
+    // Find the last occurrence of each GC flag
     for (i, arg) in args.iter().enumerate() {
-        if gc_flags.iter().any(|gc| arg.starts_with(gc)) {
-            // Extract the specific GC flag prefix
-            for gc in &gc_flags {
-                if arg.starts_with(gc) {
-                    if seen_gc.contains(gc) {
-                        indices_to_remove.push(i);
-                    } else {
-                        seen_gc.insert(*gc);
-                    }
-                    break;
+        for gc in &gc_flags {
+            if arg.starts_with(gc) {
+                last_index.insert(*gc, i);
+                break;
+            }
+        }
+    }
+
+    // Collect indices to remove (all but the last occurrence of each GC flag)
+    let mut indices_to_remove = Vec::new();
+    for (i, arg) in args.iter().enumerate() {
+        for gc in &gc_flags {
+            if arg.starts_with(gc) {
+                if last_index.get(gc) != Some(&i) {
+                    indices_to_remove.push(i);
                 }
+                break;
             }
         }
     }
