@@ -643,6 +643,35 @@ pub async fn launch_start(
     let account = state.account_storage.get(account_uuid).await
         .ok_or(LauncherError::AccountNotFound(account_id))?;
 
+    // Resolve and validate the instance working directory before launch.
+    // Older saved instances may still contain the legacy default "." path.
+    let configured_game_dir = instance.effective_game_dir();
+    let game_dir = if configured_game_dir.as_os_str().is_empty()
+        || configured_game_dir == PathBuf::from(".")
+    {
+        crate::app_dirs::get_instance_game_dir(&instance.id.to_string())?
+    } else {
+        configured_game_dir
+    };
+    tokio::fs::create_dir_all(&game_dir).await.map_err(|e| {
+        LauncherError::Launch(format!(
+            "Could not create instance game directory '{}': {}",
+            game_dir.display(), e
+        ))
+    })?;
+    let game_dir = tokio::fs::canonicalize(&game_dir).await.map_err(|e| {
+        LauncherError::Launch(format!(
+            "Could not resolve instance game directory '{}': {}",
+            game_dir.display(), e
+        ))
+    })?;
+    if !tokio::fs::metadata(&game_dir).await?.is_dir() {
+        return Err(LauncherError::Launch(format!(
+            "Instance game directory is not a directory: '{}'",
+            game_dir.display()
+        )));
+    }
+
     // Load version JSON first to get required Java version
     let versions_dir = crate::app_dirs::get_versions_dir()?;
     let version_dir = crate::app_dirs::get_version_dir(&instance.version_id)?;
@@ -668,7 +697,7 @@ pub async fn launch_start(
     let launch_args = LaunchArguments::from_version(
         &version_json,
         account.as_ref(),
-        &instance.effective_game_dir(),
+        &game_dir,
         &assets_dir,
         &libraries_dir,
         &version_json.asset_index.id,
@@ -711,7 +740,7 @@ pub async fn launch_start(
         jvm_args,
         launch_args.main_class,
         game_args,
-        &instance.effective_game_dir(),
+        &game_dir,
     ).await?;
 
     // Store the launch handle for kill functionality
