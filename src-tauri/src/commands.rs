@@ -724,6 +724,9 @@ pub async fn launch_start(
     jvm_args.push(format!("-Xms{}m", instance.memory.min_mb));
     jvm_args.push(format!("-Xmx{}m", instance.memory.max_mb));
 
+    // Deduplicate GC flags to avoid "Multiple garbage collectors selected" error
+    crate::launch::arguments::deduplicate_gc_flags(&mut jvm_args);
+
     // Combine game args
     let mut game_args = launch_args.game_args;
     game_args.extend(

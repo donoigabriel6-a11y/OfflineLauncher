@@ -233,6 +233,45 @@ pub fn substitute_placeholders(template: &str, placeholders: &HashMap<String, St
     result
 }
 
+/// Deduplicate GC flags - keep only the last occurrence of each GC algorithm
+/// to avoid "Multiple garbage collectors selected" error
+pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
+    // GC flags that conflict with each other
+    let gc_flags = [
+        "-XX:+UseG1GC",
+        "-XX:+UseZGC",
+        "-XX:+UseShenandoahGC",
+        "-XX:+UseParallelGC",
+        "-XX:+UseSerialGC",
+        "-XX:+UseConcMarkSweepGC",
+    ];
+
+    let mut seen_gc = std::collections::HashSet::new();
+    let mut indices_to_remove = Vec::new();
+
+    // Find all GC flags and mark earlier ones for removal
+    for (i, arg) in args.iter().enumerate() {
+        if gc_flags.iter().any(|gc| arg.starts_with(gc)) {
+            // Extract the specific GC flag prefix
+            for gc in &gc_flags {
+                if arg.starts_with(gc) {
+                    if seen_gc.contains(gc) {
+                        indices_to_remove.push(i);
+                    } else {
+                        seen_gc.insert(*gc);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Remove duplicate GC flags (from end to start to preserve indices)
+    for &idx in indices_to_remove.iter().rev() {
+        args.remove(idx);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
