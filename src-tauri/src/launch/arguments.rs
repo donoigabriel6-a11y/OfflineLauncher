@@ -281,6 +281,51 @@ pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
     }
 }
 
+/// Deduplicate game arguments that conflict with each other
+/// Currently handles: quick play options (--quickPlayPath, --quickPlaySingleplayer, --quickPlayMultiplayer, --quickPlayRealms)
+pub fn deduplicate_game_args(args: &mut Vec<String>) {
+    // Quick play options that conflict with each other
+    let quick_play_options = [
+        "--quickPlayPath",
+        "--quickPlaySingleplayer",
+        "--quickPlayMultiplayer",
+        "--quickPlayRealms",
+    ];
+
+    // Find the index of the LAST quick play option
+    let mut last_qp_index: Option<usize> = None;
+
+    for (i, arg) in args.iter().enumerate() {
+        for qp in &quick_play_options {
+            if arg == *qp {
+                last_qp_index = Some(i);
+                break;
+            }
+        }
+    }
+
+    // If we found at least one quick play option, remove ALL others
+    if let Some(keep_index) = last_qp_index {
+        let mut indices_to_remove = Vec::new();
+        for (i, arg) in args.iter().enumerate() {
+            if i == keep_index {
+                continue;
+            }
+            for qp in &quick_play_options {
+                if arg == *qp {
+                    indices_to_remove.push(i);
+                    break;
+                }
+            }
+        }
+
+        // Remove duplicate quick play options (from end to start to preserve indices)
+        for &idx in indices_to_remove.iter().rev() {
+            args.remove(idx);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,5 +451,56 @@ mod tests {
         deduplicate_gc_flags(&mut args);
         // Should remain unchanged
         assert_eq!(args, vec!["-Xms512m".to_string(), "-Xmx2G".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_game_args_keeps_last_quick_play() {
+        let mut args = vec![
+            "--quickPlaySingleplayer".to_string(),
+            "--username".to_string(),
+            "Steve".to_string(),
+            "--quickPlayPath".to_string(),
+            "/some/path".to_string(),
+        ];
+        deduplicate_game_args(&mut args);
+        // Should keep only the last quick play option (--quickPlayPath)
+        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--quickPlayPath".to_string(), "/some/path".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_game_args_multiple_quick_play() {
+        let mut args = vec![
+            "--quickPlaySingleplayer".to_string(),
+            "--quickPlayMultiplayer".to_string(),
+            "--quickPlayRealms".to_string(),
+        ];
+        deduplicate_game_args(&mut args);
+        // Should keep only the very last quick play option (--quickPlayRealms)
+        assert_eq!(args, vec!["--quickPlayRealms".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_game_args_no_duplicates() {
+        let mut args = vec![
+            "--username".to_string(),
+            "Steve".to_string(),
+            "--quickPlaySingleplayer".to_string(),
+        ];
+        deduplicate_game_args(&mut args);
+        // Should remain unchanged
+        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--quickPlaySingleplayer".to_string()]);
+    }
+
+    #[test]
+    fn test_deduplicate_game_args_no_quick_play() {
+        let mut args = vec![
+            "--username".to_string(),
+            "Steve".to_string(),
+            "--gameDir".to_string(),
+            "/path".to_string(),
+        ];
+        deduplicate_game_args(&mut args);
+        // Should remain unchanged
+        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--gameDir".to_string(), "/path".to_string()]);
     }
 }

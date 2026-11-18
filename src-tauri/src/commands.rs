@@ -745,6 +745,9 @@ pub async fn launch_start(
             .map(String::from)
     );
 
+    // Deduplicate game args to avoid "Only one quick play option can be specified" error
+    crate::launch::arguments::deduplicate_game_args(&mut game_args);
+
     // Launch game
     let game_process = launch_game(
         app,
