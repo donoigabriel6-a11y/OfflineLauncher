@@ -193,8 +193,14 @@ pub enum LibraryRuleOsName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Arguments {
+    #[serde(default)]
     pub game: Vec<Argument>,
+    #[serde(default)]
     pub jvm: Vec<Argument>,
+    // Mojang added this argument group for the default JVM options in newer
+    // version metadata. The hyphenated key is part of Mojang's JSON format.
+    #[serde(default, rename = "default-user-jvm")]
+    pub default_user_jvm: Vec<Argument>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,6 +213,8 @@ pub enum Argument {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionalArgument {
+    // Newer Mojang metadata can omit rules when an argument is unconditional.
+    #[serde(default)]
     pub rules: Vec<LibraryRule>,
     pub value: ArgumentValue,
 }

@@ -98,7 +98,10 @@ fn parse_modern_arguments(
     arguments: &crate::versions::model::Arguments,
     placeholders: &HashMap<String, String>,
 ) -> Result<(Vec<String>, Vec<String>)> {
-    let jvm_args = parse_argument_list(&arguments.jvm, placeholders)?;
+    // New Mojang metadata separates default user JVM options from the
+    // platform-conditional JVM options. Preserve both groups in launch order.
+    let mut jvm_args = parse_argument_list(&arguments.default_user_jvm, placeholders)?;
+    jvm_args.extend(parse_argument_list(&arguments.jvm, placeholders)?);
     let game_args = parse_argument_list(&arguments.game, placeholders)?;
     Ok((jvm_args, game_args))
 }
@@ -135,7 +138,8 @@ fn parse_argument_list(
             }
             Argument::Conditional(cond) => {
                 // Evaluate rules
-                if evaluate_argument_rules(&cond.rules)? {
+                // An omitted rules array means the argument is unconditional.
+                if cond.rules.is_empty() || evaluate_argument_rules(&cond.rules)? {
                     match &cond.value {
                         ArgumentValue::Single(s) => {
                             result.push(substitute_placeholders(s, placeholders));
@@ -185,10 +189,28 @@ mod tests {
                 Argument::Simple("${game_directory}".to_string()),
             ],
             jvm: vec![],
+            default_user_jvm: vec![],
         };
 
         let (_, game_args) = parse_modern_arguments(&arguments, &placeholders).unwrap();
         assert_eq!(game_args, vec!["--gameDir".to_string(), "C:/Users/Test User/.minecraft".to_string()]);
+    }
+
+    #[test]
+    fn test_mojang_default_user_jvm_arguments_without_rules_deserialize() {
+        let json = r#"{
+            "default-user-jvm": [
+                {"value": ["-Xms2G", "-Xmx4G"]},
+                {"rules": [{"action": "allow", "os": {"name": "windows"}}], "value": ["-Dexample=true"]}
+            ],
+            "game": [],
+            "jvm": []
+        }"#;
+        let arguments: crate::versions::model::Arguments = serde_json::from_str(json).unwrap();
+        let mut placeholders = HashMap::new();
+        let (jvm, game) = parse_modern_arguments(&arguments, &placeholders).unwrap();
+        assert_eq!(jvm, vec!["-Xms2G", "-Xmx4G"]);
+        assert!(game.is_empty());
     }
 
     #[test]

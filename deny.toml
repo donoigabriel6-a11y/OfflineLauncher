@@ -8,6 +8,7 @@ ignore = [
   "RUSTSEC-2026-0370", # zvariant: merged into zbus 6
   "RUSTSEC-2026-0371", # zbus_names: merged into zbus 6
   "RUSTSEC-2026-0372", # zvariant_derive: merged into zbus 6
+  "RUSTSEC-2026-0543", # chrono is unmaintained; advisory states no safe upgrade is available
 ]
 
 [licenses]
