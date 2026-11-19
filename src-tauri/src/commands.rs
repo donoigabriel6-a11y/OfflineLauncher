@@ -743,6 +743,9 @@ pub async fn launch_start(
         let libraries_dir = crate::app_dirs::get_libraries_dir()?;
         for fabric_lib in &fabric_profile.libraries {
             if let Some(url) = &fabric_lib.url {
+                if url.is_empty() {
+                    continue;
+                }
                 let artifact_path = library_artifact_path(&Library {
                     name: fabric_lib.name.clone(),
                     downloads: Some(crate::versions::model::LibraryDownloads {
@@ -772,7 +775,9 @@ pub async fn launch_start(
                         stage: crate::events::DownloadStage::Libraries,
                         version_id: instance.version_id.clone(),
                     };
-                    state.download_manager.download_file(task, Some(&app)).await?;
+                    if let Err(e) = state.download_manager.download_file(task, Some(&app)).await {
+                        tracing::warn!("Failed to download Fabric library {}: {}", fabric_lib.name, e);
+                    }
                 }
             }
         }
