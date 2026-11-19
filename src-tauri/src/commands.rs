@@ -732,10 +732,24 @@ pub async fn launch_start(
     // Install Fabric if instance uses Fabric loader
     if instance.loader == crate::instances::model::ModLoader::Fabric {
         let loader_version = instance.loader_version.as_deref().unwrap_or("latest");
+
+        // If "latest" is specified, fetch the latest stable loader version for this Minecraft version
+        let resolved_loader_version = if loader_version == "latest" {
+            let loader_versions = crate::loaders::fabric::fetch_fabric_loader_versions(&state.http_client).await?;
+            loader_versions
+                .into_iter()
+                .filter(|v| v.stable)
+                .max_by_key(|v| v.build)
+                .map(|v| v.version)
+                .unwrap_or_else(|| "latest".to_string())
+        } else {
+            loader_version.to_string()
+        };
+
         let fabric_profile = install_fabric(
             &state.http_client,
             &instance.version_id,
-            loader_version,
+            &resolved_loader_version,
             &version_dir,
         ).await?;
 
