@@ -146,11 +146,11 @@ impl Account for OfflineAccount {
     }
 
     fn access_token(&self) -> &str {
-        "offline"
+        "0"
     }
 
     fn user_type(&self) -> UserType {
-        UserType::Msa
+        UserType::Legacy
     }
 
     fn account_type(&self) -> AccountType {
