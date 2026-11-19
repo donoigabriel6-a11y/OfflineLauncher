@@ -29,7 +29,7 @@ use crate::events::{
 };
 use crate::versions::inheritance::load_version_json;
 use crate::loaders::fabric::{install_fabric, FabricInstallerProfile};
-use crate::versions::model::{VersionJson, Library, Arguments, Argument, ArgumentValue};
+use crate::versions::model::{Library, Arguments, Argument, ArgumentValue};
 use crate::downloads::manager::DownloadTask;
 use crate::launch::classpath::{library_artifact_path, build_classpath, extract_natives, get_natives_dir};
 use crate::versions::manifest::fetch_version_manifest;
