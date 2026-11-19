@@ -299,23 +299,28 @@ pub fn deduplicate_game_args(args: &mut Vec<String>) {
         "--quickPlayRealms",
     ];
 
-    // First pass: remove quick play flags that have empty string as their next argument (value)
-    let mut i = 0;
-    while i < args.len() {
+    // First pass: find indices of quick play flags with empty string values
+    let mut indices_to_remove = Vec::new();
+    for i in 0..args.len().saturating_sub(1) {
         let arg = &args[i];
         for qp in &quick_play_options {
             if arg == *qp {
                 // Check if next argument is an empty string (placeholder was substituted with "")
-                if i + 1 < args.len() && args[i + 1].is_empty() {
-                    // Remove both the flag and its empty value
-                    args.remove(i + 1); // Remove value first
-                    args.remove(i);     // Then remove flag
-                    if i > 0 { i -= 1; } // Adjust index
-                    continue;
+                if args[i + 1].is_empty() {
+                    indices_to_remove.push(i);     // flag index
+                    indices_to_remove.push(i + 1); // value index
                 }
             }
         }
-        i += 1;
+    }
+
+    // Remove from end to start to preserve indices
+    indices_to_remove.sort_by(|a, b| b.cmp(a));
+    indices_to_remove.dedup();
+    for &idx in &indices_to_remove {
+        if idx < args.len() {
+            args.remove(idx);
+        }
     }
 
     // Find the index of the LAST quick play option
