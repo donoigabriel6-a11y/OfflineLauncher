@@ -90,6 +90,13 @@ fn build_placeholders(
     map.insert("auth_xuid".to_string(), "0".to_string());
     map.insert("user_properties".to_string(), "{}".to_string()); // Empty JSON for offline
 
+    // Quick play placeholders (used in modern version metadata)
+    // Set to empty string so they get substituted and don't end up as literal arguments
+    map.insert("quickPlayPath".to_string(), "".to_string());
+    map.insert("quickPlaySingleplayer".to_string(), "".to_string());
+    map.insert("quickPlayMultiplayer".to_string(), "".to_string());
+    map.insert("quickPlayRealms".to_string(), "".to_string());
+
     map
 }
 
