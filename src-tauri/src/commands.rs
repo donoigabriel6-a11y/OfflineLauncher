@@ -30,6 +30,8 @@ use crate::events::{
 use crate::versions::inheritance::load_version_json;
 use crate::loaders::fabric::{install_fabric, FabricInstallerProfile};
 use crate::versions::model::{VersionJson, Library, Arguments, Argument, ArgumentValue};
+use crate::downloads::manager::DownloadTask;
+use crate::launch::classpath::{library_artifact_path, get_natives_dir};
 use crate::versions::manifest::fetch_version_manifest;
 use crate::launch::classpath::{build_classpath, extract_natives, get_natives_dir};
 use crate::java::detect_system_java;
@@ -737,6 +739,44 @@ pub async fn launch_start(
             loader_version,
             &version_dir,
         ).await?;
+
+        // Download Fabric libraries
+        let libraries_dir = crate::app_dirs::get_libraries_dir()?;
+        for fabric_lib in &fabric_profile.libraries {
+            if let Some(url) = &fabric_lib.url {
+                let artifact_path = library_artifact_path(&Library {
+                    name: fabric_lib.name.clone(),
+                    downloads: Some(crate::versions::model::LibraryDownloads {
+                        artifact: Some(crate::versions::model::DownloadInfo {
+                            url: url.clone(),
+                            sha1: String::new(),
+                            size: 0,
+                            path: None,
+                        }),
+                        classifiers: None,
+                    }),
+                    natives: None,
+                    rules: vec![],
+                    extract: None,
+                    url: None,
+                }, &libraries_dir)?;
+
+                if !artifact_path.exists() {
+                    if let Some(parent) = artifact_path.parent() {
+                        tokio::fs::create_dir_all(parent).await?;
+                    }
+                    let task = DownloadTask {
+                        url: url.clone(),
+                        destination: artifact_path.clone(),
+                        expected_sha1: None, // Fabric installer doesn't provide SHA1
+                        file_name: fabric_lib.name.clone(),
+                        stage: crate::events::DownloadStage::Libraries,
+                        version_id: instance.version_id.clone(),
+                    };
+                    state.download_manager.download_file(task, Some(&app)).await?;
+                }
+            }
+        }
 
         // Merge Fabric profile into version JSON
         version_json = merge_fabric_profile(version_json, fabric_profile);
