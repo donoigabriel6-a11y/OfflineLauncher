@@ -73,7 +73,9 @@ pub async fn fetch_fabric_versions(client: &Client) -> Result<Vec<FabricVersion>
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric versions: {}", response.status())));
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric versions: {} - {}", status, text)));
     }
 
     let versions: Vec<FabricVersion> = response.json().await
@@ -89,7 +91,9 @@ pub async fn fetch_fabric_loader_versions(client: &Client) -> Result<Vec<FabricL
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric loader versions: {}", response.status())));
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric loader versions: {} - {}", status, text)));
     }
 
     let versions: Vec<FabricLoaderVersion> = response.json().await
@@ -114,8 +118,10 @@ pub async fn install_fabric(
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
         return Err(LauncherError::ModLoader(
-            format!("Failed to get Fabric installer profile: {}", response.status())
+            format!("Failed to get Fabric installer profile: {} - {}", status, text)
         ));
     }
 

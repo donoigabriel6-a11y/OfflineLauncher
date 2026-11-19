@@ -73,7 +73,9 @@ pub async fn fetch_quilt_versions(client: &Client) -> Result<Vec<QuiltVersion>> 
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt versions: {}", response.status())));
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt versions: {} - {}", status, text)));
     }
 
     let versions: Vec<QuiltVersion> = response.json().await
@@ -89,7 +91,9 @@ pub async fn fetch_quilt_loader_versions(client: &Client) -> Result<Vec<QuiltLoa
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt loader versions: {}", response.status())));
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt loader versions: {} - {}", status, text)));
     }
 
     let versions: Vec<QuiltLoaderVersion> = response.json().await
@@ -114,8 +118,10 @@ pub async fn install_quilt(
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
         return Err(LauncherError::ModLoader(
-            format!("Failed to get Quilt installer profile: {}", response.status())
+            format!("Failed to get Quilt installer profile: {} - {}", status, text)
         ));
     }
 
