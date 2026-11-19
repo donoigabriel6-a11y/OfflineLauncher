@@ -290,6 +290,7 @@ pub fn deduplicate_gc_flags(args: &mut Vec<String>) {
 
 /// Deduplicate game arguments that conflict with each other
 /// Currently handles: quick play options (--quickPlayPath, --quickPlaySingleplayer, --quickPlayMultiplayer, --quickPlayRealms)
+/// Also removes --demo flag to prevent demo mode for offline accounts
 pub fn deduplicate_game_args(args: &mut Vec<String>) {
     // Quick play options that conflict with each other
     let quick_play_options = [
@@ -311,6 +312,13 @@ pub fn deduplicate_game_args(args: &mut Vec<String>) {
                     indices_to_remove.push(i + 1); // value index
                 }
             }
+        }
+    }
+
+    // Also remove --demo flag to prevent demo mode
+    for (i, arg) in args.iter().enumerate() {
+        if arg == "--demo" {
+            indices_to_remove.push(i);
         }
     }
 
