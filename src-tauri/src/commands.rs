@@ -28,6 +28,8 @@ use crate::events::{
     LaunchStatusEvent, LaunchStatus,
 };
 use crate::versions::inheritance::load_version_json;
+use crate::loaders::fabric::{install_fabric, FabricInstallerProfile};
+use crate::versions::model::{VersionJson, Library, Arguments, Argument, ArgumentValue};
 use crate::versions::manifest::fetch_version_manifest;
 use crate::launch::classpath::{build_classpath, extract_natives, get_natives_dir};
 use crate::java::detect_system_java;
@@ -625,6 +627,55 @@ pub async fn instances_open_folder(
     state.instance_storage.open_game_dir(uuid).await
 }
 
+/// Merge Fabric installer profile into version JSON
+fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricInstallerProfile) -> VersionJson {
+    // Update main class
+    if !fabric_profile.main_class.is_empty() {
+        version_json.main_class = fabric_profile.main_class;
+    }
+
+    // Update java version
+    version_json.java_version = crate::versions::model::JavaVersion {
+        component: fabric_profile.java_version.component,
+        major_version: fabric_profile.java_version.major_version,
+    };
+
+    // Merge libraries
+    for fabric_lib in fabric_profile.libraries {
+        if let Some(url) = fabric_lib.url {
+            let lib = Library {
+                name: fabric_lib.name.clone(),
+                downloads: Some(crate::versions::model::LibraryDownloads {
+                    artifact: Some(crate::versions::model::DownloadInfo {
+                        url,
+                        sha1: String::new(), // Fabric installer doesn't provide SHA1
+                        size: 0,
+                        path: None,
+                    }),
+                    classifiers: None,
+                }),
+                natives: None,
+                rules: vec![],
+                extract: None,
+                url: None,
+            };
+            // Replace existing library with same name or add new
+            version_json.libraries.retain(|l| l.name != fabric_lib.name);
+            version_json.libraries.push(lib);
+        }
+    }
+
+    // Merge arguments (Fabric client arguments override)
+    if !fabric_profile.arguments.client.is_empty() {
+        version_json.arguments.game = fabric_profile.arguments.client
+            .into_iter()
+            .map(Argument::Simple)
+            .collect();
+    }
+
+    version_json
+}
+
 // ==================== LAUNCH COMMANDS ====================
 
 #[tauri::command]
@@ -675,7 +726,21 @@ pub async fn launch_start(
     // Load version JSON first to get required Java version
     let versions_dir = crate::app_dirs::get_versions_dir()?;
     let version_dir = crate::app_dirs::get_version_dir(&instance.version_id)?;
-    let version_json = load_version_json(&instance.version_id, &versions_dir).await?;
+    let mut version_json = load_version_json(&instance.version_id, &versions_dir).await?;
+
+    // Install Fabric if instance uses Fabric loader
+    if instance.loader == crate::instances::model::ModLoader::Fabric {
+        let loader_version = instance.loader_version.as_deref().unwrap_or("latest");
+        let fabric_profile = install_fabric(
+            &state.http_client,
+            &instance.version_id,
+            loader_version,
+            &version_dir,
+        ).await?;
+
+        // Merge Fabric profile into version JSON
+        version_json = merge_fabric_profile(version_json, fabric_profile);
+    }
 
     // Resolve Java - use version's required Java version from version JSON
     let required_java = version_json.java_version.major_version;
