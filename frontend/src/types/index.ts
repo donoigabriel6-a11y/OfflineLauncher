@@ -238,3 +238,49 @@ export interface QuiltLoaderVersion {
   build: number;
   stable: boolean;
 }
+
+export type ContentProvider = 'modrinth' | 'curseforge';
+export type ContentCategory = 'mods' | 'modpacks' | 'resourcepacks' | 'shaders';
+
+export interface ContentProject {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  iconUrl?: string | null;
+  downloads: number;
+  gameVersions?: string[];
+  loaders?: string[];
+}
+
+export interface ContentSearchResult {
+  projects: ContentProject[];
+  offset: number;
+  totalHits: number;
+}
+
+export interface ContentVersion {
+  id: string;
+  name: string;
+  versionNumber: string;
+  gameVersions?: string[];
+  loaders?: string[];
+}
+
+export interface ContentInstallResult {
+  installId: string;
+  projectId: string;
+  versionId: string;
+  title: string;
+  fileName?: string;
+}
+
+export interface InstalledContent {
+  installId: string;
+  provider: ContentProvider;
+  contentType: ContentCategory;
+  projectId: string;
+  versionId: string;
+  versionNumber: string;
+  title: string;
+}
