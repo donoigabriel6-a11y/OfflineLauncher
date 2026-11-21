@@ -91,6 +91,31 @@ fn is_stable_loader(version: &str) -> bool {
         .any(|marker| lower.contains(marker))
 }
 
+fn stable_version_components(version: &str) -> Vec<u64> {
+    version
+        .split(['-', '+'])
+        .next()
+        .unwrap_or(version)
+        .split('.')
+        .map(|component| component.parse().unwrap_or(0))
+        .collect()
+}
+
+/// Pick the newest stable release by semantic version, not Quilt's build number.
+/// Build numbers are not globally monotonic across releases (for example, a
+/// newer stable may be build 1 while an older release is build 4).
+pub fn latest_stable_quilt_loader_version(versions: &[QuiltLoaderVersion]) -> Option<String> {
+    versions
+        .iter()
+        .filter(|version| version.stable)
+        .max_by(|left, right| {
+            stable_version_components(&left.version)
+                .cmp(&stable_version_components(&right.version))
+                .then_with(|| left.build.cmp(&right.build))
+        })
+        .map(|version| version.version.clone())
+}
+
 async fn response_text(response: reqwest::Response, operation: &str) -> Result<String> {
     let status = response.status();
     let text = response
@@ -201,6 +226,29 @@ mod tests {
         assert!(!is_stable_loader("0.20.0-beta.9"));
         assert!(!is_stable_loader("0.20.0-rc.1"));
         assert!(is_stable_loader("0.20.0"));
+    }
+
+    #[test]
+    fn latest_stable_loader_uses_semver_not_build_number() {
+        let versions = vec![
+            QuiltLoaderVersion {
+                version: "0.26.4".into(),
+                build: 4,
+                stable: true,
+            },
+            QuiltLoaderVersion {
+                version: "0.31.0-beta.1".into(),
+                build: 10,
+                stable: false,
+            },
+            QuiltLoaderVersion {
+                version: "0.30.2".into(),
+                build: 2,
+                stable: true,
+            },
+        ];
+
+        assert_eq!(latest_stable_quilt_loader_version(&versions).as_deref(), Some("0.30.2"));
     }
 
     #[test]

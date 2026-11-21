@@ -927,15 +927,12 @@ pub async fn launch_start(
     } else if instance.loader == crate::instances::model::ModLoader::Quilt {
         let configured_version = instance.loader_version.as_deref().unwrap_or("latest");
         let loader_version = if configured_version.eq_ignore_ascii_case("latest") {
-            crate::loaders::quilt::fetch_quilt_loader_versions(
+            let versions = crate::loaders::quilt::fetch_quilt_loader_versions(
                 &state.http_client,
                 &instance.version_id,
             )
-            .await?
-            .into_iter()
-            .filter(|version| version.stable)
-            .max_by_key(|version| version.build)
-            .map(|version| version.version)
+            .await?;
+            crate::loaders::quilt::latest_stable_quilt_loader_version(&versions)
             .ok_or_else(|| {
                 LauncherError::ModLoader(format!(
                     "No stable Quilt Loader version is available for Minecraft {}",
