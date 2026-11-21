@@ -24,23 +24,20 @@ pub struct FabricLoaderVersion {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FabricInstallerResponse {
-    pub profile: FabricInstallerProfile,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct FabricInstallerProfile {
+    #[serde(default)]
     pub id: String,
-    #[serde(rename = "inheritsFrom")]
+    #[serde(default, rename = "inheritsFrom")]
     pub inherits_from: String,
-    #[serde(rename = "releaseTime")]
+    #[serde(default, rename = "releaseTime")]
     pub release_time: String,
-    #[serde(rename = "mainClass")]
+    #[serde(default, rename = "mainClass")]
     pub main_class: String,
-    #[serde(rename = "javaVersion")]
-    pub java_version: FabricJavaVersion,
+    #[serde(default, rename = "javaVersion")]
+    pub java_version: Option<FabricJavaVersion>,
+    #[serde(default)]
     pub libraries: Vec<FabricLibrary>,
+    #[serde(default)]
     pub arguments: FabricArguments,
 }
 
@@ -60,9 +57,15 @@ pub struct FabricLibrary {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FabricArguments {
+    #[serde(default)]
+    pub game: Vec<String>,
+    #[serde(default)]
+    pub jvm: Vec<String>,
+    // Some installer profiles use the older `client` field.
+    #[serde(default)]
     pub client: Vec<String>,
 }
 
@@ -144,23 +147,50 @@ pub async fn install_fabric(
         .map_err(|e| LauncherError::Http(e))?;
 
     // Parse the JSON from the text
-    let installer: FabricInstallerResponse = serde_json::from_str(&text)
+    let profile: FabricInstallerProfile = serde_json::from_str(&text)
         .map_err(|e| LauncherError::ModLoader(
             format!("Failed to parse Fabric installer profile JSON: {} - Response: {}", e, text)
         ))?;
 
-    Ok(installer.profile)
+    if profile.id.is_empty() || profile.main_class.is_empty() || profile.libraries.is_empty() {
+        return Err(LauncherError::ModLoader(format!(
+            "Fabric profile for Minecraft {} and loader {} is missing required launch data",
+            minecraft_version, loader_version
+        )));
+    }
+
+    Ok(profile)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_deserializes_top_level_fabric_profile_response() {
+        let profile: FabricInstallerProfile = serde_json::from_str(r#"{
+            "id": "fabric-loader-1.21.4-0.16.10",
+            "inheritsFrom": "1.21.4",
+            "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+            "arguments": {"game": [], "jvm": ["-Dfabric.example=true"]},
+            "libraries": [{
+                "name": "net.fabricmc:fabric-loader:0.16.10",
+                "url": "https://maven.fabricmc.net/",
+                "size": 100,
+                "sha1": "abc"
+            }]
+        }"#).unwrap();
+
+        assert_eq!(profile.main_class, "net.fabricmc.loader.impl.launch.knot.KnotClient");
+        assert_eq!(profile.arguments.jvm, vec!["-Dfabric.example=true"]);
+        assert_eq!(profile.libraries.len(), 1);
+        assert!(profile.java_version.is_none());
+    }
+
     #[tokio::test]
     async fn test_fetch_fabric_versions() {
         let client = Client::new();
         let versions = fetch_fabric_versions(&client).await;
-        // This will fail without network, but tests structure is correct
         println!("Fabric versions result: {:?}", versions.is_ok());
     }
 }

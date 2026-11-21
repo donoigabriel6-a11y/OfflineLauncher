@@ -1,7 +1,7 @@
 // Unit tests for argument parsing and placeholder substitution
 use offline_launcher_lib::launch::arguments::{substitute_placeholders, LaunchArguments};
 use offline_launcher_lib::accounts::{OfflineAccount, Account};
-use offline_launcher_lib::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Argument, ArgumentValue, LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
+use offline_launcher_lib::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Argument, ArgumentValue};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -36,6 +36,7 @@ fn create_test_version() -> VersionJson {
                 Argument::Simple("-Xmx${max_memory}".to_string()),
                 Argument::Simple("-Djava.library.path=${natives_directory}".to_string()),
             ],
+            default_user_jvm: vec![],
         },
         minecraft_arguments: None,
         downloads: Downloads {
@@ -123,15 +124,15 @@ fn test_conditional_arguments() {
         arguments: Arguments {
             game: vec![
                 Argument::Conditional(offline_launcher_lib::versions::model::ConditionalArgument {
-                    rules: vec![LibraryRule {
-                        action: LibraryRuleAction::Allow,
-                        os: Some(LibraryRuleOs { name: LibraryRuleOsName::Windows, version: None, arch: None }),
-                        features: None,
-                    }],
+                    rules: vec![serde_json::json!({
+                        "action": "allow",
+                        "os": { "name": "windows" }
+                    })],
                     value: ArgumentValue::Single("--windows-only".to_string()),
                 }),
             ],
             jvm: vec![],
+            default_user_jvm: vec![],
         },
         minecraft_arguments: None,
         downloads: Downloads { client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None }, server: None, server_mappings: None },

@@ -628,51 +628,71 @@ pub async fn instances_open_folder(
     state.instance_storage.open_game_dir(uuid).await
 }
 
+/// Build a Maven artifact URL from Fabric's repository base URL and coordinate.
+fn fabric_library_url(repository: Option<&str>, coordinate: &str) -> Option<String> {
+    let (coordinate, extension) = coordinate
+        .split_once('@')
+        .map(|(coordinate, extension)| (coordinate, extension))
+        .unwrap_or((coordinate, "jar"));
+    let parts: Vec<_> = coordinate.split(':').collect();
+    if !(3..=4).contains(&parts.len()) {
+        return None;
+    }
+
+    let (group, artifact, version) = (parts[0], parts[1], parts[2]);
+    let classifier = parts.get(3).map(|value| format!("-{value}")).unwrap_or_default();
+    let file_name = format!("{artifact}-{version}{classifier}.{extension}");
+    let relative_path = format!("{}/{}/{}/{}", group.replace('.', "/"), artifact, version, file_name);
+    let repository = repository.unwrap_or("https://maven.fabricmc.net/").trim_end_matches('/');
+    Some(format!("{repository}/{relative_path}"))
+}
+
 /// Merge Fabric installer profile into version JSON
 fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricInstallerProfile) -> VersionJson {
-    // Update main class
     if !fabric_profile.main_class.is_empty() {
         version_json.main_class = fabric_profile.main_class;
     }
 
-    // Update java version
-    version_json.java_version = crate::versions::model::JavaVersion {
-        component: fabric_profile.java_version.component,
-        major_version: fabric_profile.java_version.major_version,
-    };
+    if let Some(java_version) = fabric_profile.java_version {
+        version_json.java_version = crate::versions::model::JavaVersion {
+            component: java_version.component,
+            major_version: java_version.major_version,
+        };
+    }
 
-    // Merge libraries
     for fabric_lib in fabric_profile.libraries {
-        if let Some(url) = fabric_lib.url {
-            let lib = Library {
-                name: fabric_lib.name.clone(),
-                downloads: Some(crate::versions::model::LibraryDownloads {
-                    artifact: Some(crate::versions::model::DownloadInfo {
-                        url,
-                        sha1: String::new(), // Fabric installer doesn't provide SHA1
-                        size: 0,
-                        path: None,
-                    }),
-                    classifiers: None,
+        let Some(url) = fabric_library_url(fabric_lib.url.as_deref(), &fabric_lib.name) else {
+            continue;
+        };
+        let lib = Library {
+            name: fabric_lib.name.clone(),
+            downloads: Some(crate::versions::model::LibraryDownloads {
+                artifact: Some(crate::versions::model::DownloadInfo {
+                    url,
+                    sha1: String::new(),
+                    size: 0,
+                    path: None,
                 }),
-                natives: None,
-                rules: vec![],
-                extract: None,
-                url: None,
-            };
-            // Replace existing library with same name or add new
-            version_json.libraries.retain(|l| l.name != fabric_lib.name);
-            version_json.libraries.push(lib);
-        }
+                classifiers: None,
+            }),
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+        version_json.libraries.retain(|library| library.name != fabric_lib.name);
+        version_json.libraries.push(lib);
     }
 
-    // Merge arguments (Fabric client arguments override)
-    if !fabric_profile.arguments.client.is_empty() {
-        version_json.arguments.game = fabric_profile.arguments.client
-            .into_iter()
-            .map(Argument::Simple)
-            .collect();
-    }
+    version_json.arguments.game.extend(
+        fabric_profile.arguments.game.into_iter().map(Argument::Simple),
+    );
+    version_json.arguments.game.extend(
+        fabric_profile.arguments.client.into_iter().map(Argument::Simple),
+    );
+    version_json.arguments.jvm.extend(
+        fabric_profile.arguments.jvm.into_iter().map(Argument::Simple),
+    );
 
     version_json
 }
@@ -756,10 +776,7 @@ pub async fn launch_start(
         // Download Fabric libraries
         let libraries_dir = crate::app_dirs::get_libraries_dir()?;
         for fabric_lib in &fabric_profile.libraries {
-            if let Some(url) = &fabric_lib.url {
-                if url.is_empty() {
-                    continue;
-                }
+            if let Some(url) = fabric_library_url(fabric_lib.url.as_deref(), &fabric_lib.name) {
                 let artifact_path = library_artifact_path(&Library {
                     name: fabric_lib.name.clone(),
                     downloads: Some(crate::versions::model::LibraryDownloads {
