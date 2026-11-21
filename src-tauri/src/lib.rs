@@ -32,7 +32,8 @@ pub use accounts::{
     UserType,
 };
 pub use config::Config;
-pub use content::{ContentState, ContentStorage};
+pub use content::commands::ContentState;
+pub use content::storage::ContentStorage;
 pub use downloads::{
     DownloadManager, DownloadOptions, DownloadProgress, DownloadStage, DownloadTask,
 };
