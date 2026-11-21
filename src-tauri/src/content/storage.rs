@@ -3,7 +3,7 @@
 use crate::app_dirs::{get_app_config_dir, get_app_data_dir};
 use crate::content::types::InstalledContent;
 use crate::error::{LauncherError, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ const INSTALLATIONS_FILE: &str = "content-installations.json";
 const CURSEFORGE_KEY_FILE: &str = "curseforge-api-key";
 
 /// Serialized snapshot of all installations, keyed by instance id.
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct InstallationsSnapshot(HashMap<String, Vec<InstalledContent>>);
 
 pub struct ContentStorage {

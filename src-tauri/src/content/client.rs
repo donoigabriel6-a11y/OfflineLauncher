@@ -1,13 +1,13 @@
 //! API clients for Modrinth and CurseForge content providers.
 
 use crate::content::types::{
-    ContentCategory, ContentInstallResult, ContentProject, ContentProvider, ContentSearchResult,
-    ContentVersion,
+    ContentCategory, ContentProject, ContentProvider, ContentSearchResult, ContentVersion,
 };
 use crate::error::{LauncherError, Result};
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
+use tokio::io::AsyncWriteExt;
 
 const MODRINTH_API: &str = "https://api.modrinth.com/v2";
 const CURSEFORGE_API: &str = "https://api.curseforge.com/v1";
@@ -268,17 +268,17 @@ pub async fn curseforge_search(
 ) -> Result<ContentSearchResult> {
     let page_index = offset / 20;
 
-    let mut params = HashMap::new();
-    params.insert("gameId", &CURSEFORGE_GAME_ID.to_string());
-    params.insert("searchFilter", query);
-    params.insert("pageSize", "20");
-    params.insert("pageIndex", page_index.to_string().as_str());
+    let mut params: HashMap<String, String> = HashMap::new();
+    params.insert("gameId".to_string(), CURSEFORGE_GAME_ID.to_string());
+    params.insert("searchFilter".to_string(), query.to_string());
+    params.insert("pageSize".to_string(), "20".to_string());
+    params.insert("pageIndex".to_string(), page_index.to_string());
 
     if let Some(category_id) = category.as_curseforge_category_id() {
-        params.insert("categoryId", &category_id.to_string());
+        params.insert("categoryId".to_string(), category_id.to_string());
     }
     if !minecraft_version.is_empty() {
-        params.insert("gameVersion", minecraft_version);
+        params.insert("gameVersion".to_string(), minecraft_version.to_string());
     }
 
     let url = format!("{CURSEFORGE_API}/mods/search");

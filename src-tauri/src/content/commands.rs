@@ -8,13 +8,13 @@ use crate::content::client::{
 };
 use crate::content::storage::ContentStorage;
 use crate::content::types::{
-    ContentCategory, ContentInstallArgs, ContentInstallResult, ContentSearchArgs,
+    ContentCategory, ContentInstallArgs, ContentSearchArgs,
     ContentSearchResult, ContentUninstallArgs, ContentVersion, ContentVersionsArgs,
     CurseforgeKeySetArgs, InstalledContent,
 };
 use crate::error::{LauncherError, Result};
 use serde::Deserialize;
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 use tokio::fs;
 
 /// Application state extended with content storage (added by the setup hook).
@@ -92,7 +92,7 @@ async fn install_file_to_instance(
         project_id: project_id.to_string(),
         version_id: version_id.to_string(),
         title: title.to_string(),
-        file_name: download_result.file_name,
+        file_name: Some(download_result.file_name),
     })
 }
 

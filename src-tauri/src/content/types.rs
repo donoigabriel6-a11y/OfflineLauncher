@@ -137,6 +137,7 @@ pub struct ContentInstallArgs {
     pub content_type: String,
     pub project_id: String,
     pub version_id: String,
+    pub minecraft_version: String,
 }
 
 #[derive(Debug, Deserialize)]

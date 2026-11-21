@@ -115,7 +115,7 @@ export function ContentBrowser() {
     if (!selectedProject || !selectedVersionId || !instanceId) return;
     setBusy(true);
     try {
-      await contentApi.install({ instanceId, provider, contentType: category, projectId: selectedProject.id, versionId: selectedVersionId });
+      await contentApi.install({ instanceId, provider, contentType: category, projectId: selectedProject.id, versionId: selectedVersionId, minecraftVersion: selectedInstance?.versionId ?? '' });
       toast({ type: 'success', title: 'Installed', message: `${selectedProject.title} was added to ${selectedInstance?.name ?? 'the instance'}.` });
       setSelectedProject(null);
       await refreshInstalled();
