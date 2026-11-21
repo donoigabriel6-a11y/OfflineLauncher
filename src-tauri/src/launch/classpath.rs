@@ -55,22 +55,7 @@ pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<
     }
 
     // Fall back to Maven coordinates when the manifest omits `path`.
-    let parts: Vec<&str> = library.name.split(':').collect();
-    if parts.len() != 3 {
-        return Err(LauncherError::Launch(format!(
-            "Invalid library name format: {}",
-            library.name
-        )));
-    }
-    let (group, artifact, version) = (parts[0], parts[1], parts[2]);
-    let group_path = group.replace('.', "/");
-
-    let filename = format!("{}-{}.jar", artifact, version);
-    Ok(libraries_dir
-        .join(group_path)
-        .join(artifact)
-        .join(version)
-        .join(filename))
+    maven_artifact_path(libraries_dir, &library.name, None)
 }
 
 /// Get the natives directory for a version
@@ -155,6 +140,35 @@ fn library_download_path(libraries_dir: &Path, relative_path: &str) -> Result<Pa
     Ok(libraries_dir.join(path))
 }
 
+/// Resolve Maven coordinates including optional classifiers and `@extension`
+/// suffixes, validating the resulting relative path before joining it.
+fn maven_artifact_path(
+    libraries_dir: &Path,
+    coordinate: &str,
+    classifier_override: Option<&str>,
+) -> Result<PathBuf> {
+    let (coordinate, extension) = coordinate
+        .split_once('@')
+        .map(|(coordinate, extension)| (coordinate, extension))
+        .unwrap_or((coordinate, "jar"));
+    let parts: Vec<&str> = coordinate.split(':').collect();
+    if !(3..=4).contains(&parts.len()) || parts.iter().any(|part| part.is_empty()) || extension.is_empty() {
+        return Err(LauncherError::Launch(format!(
+            "Invalid library name format: {}",
+            coordinate
+        )));
+    }
+
+    let group_path = parts[0].replace('.', "/");
+    let artifact = parts[1];
+    let version = parts[2];
+    let classifier = classifier_override.or_else(|| parts.get(3).copied());
+    let classifier_suffix = classifier.map(|value| format!("-{}", value)).unwrap_or_default();
+    let filename = format!("{}-{}{}.{}", artifact, version, classifier_suffix, extension);
+    let relative_path = format!("{}/{}/{}/{}", group_path, artifact, version, filename);
+    library_download_path(libraries_dir, &relative_path)
+}
+
 pub fn library_native_path(
     library: &Library,
     libraries_dir: &Path,
@@ -168,22 +182,7 @@ pub fn library_native_path(
         return library_download_path(libraries_dir, path);
     }
 
-    let parts: Vec<&str> = library.name.split(':').collect();
-    if parts.len() != 3 {
-        return Err(LauncherError::Launch(format!(
-            "Invalid library name format: {}",
-            library.name
-        )));
-    }
-    let (group, artifact, version) = (parts[0], parts[1], parts[2]);
-    let group_path = group.replace('.', "/");
-
-    let filename = format!("{}-{}-{}.jar", artifact, version, classifier);
-    Ok(libraries_dir
-        .join(group_path)
-        .join(artifact)
-        .join(version)
-        .join(filename))
+    maven_artifact_path(libraries_dir, &library.name, Some(classifier))
 }
 
 async fn extract_native_jar(
@@ -302,6 +301,25 @@ mod tests {
         assert_eq!(
             path,
             PathBuf::from("/libraries/com/example/test-lib/1.0.0/test-lib-1.0.0.jar")
+        );
+    }
+
+    #[test]
+    fn test_library_artifact_path_supports_classifier_and_extension() {
+        let library = Library {
+            name: "org.example:sample:2.1.0:natives-windows@zip".to_string(),
+            downloads: None,
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+
+        assert_eq!(
+            library_artifact_path(&library, Path::new("/libraries")).unwrap(),
+            PathBuf::from(
+                "/libraries/org/example/sample/2.1.0/sample-2.1.0-natives-windows.zip"
+            )
         );
     }
 }

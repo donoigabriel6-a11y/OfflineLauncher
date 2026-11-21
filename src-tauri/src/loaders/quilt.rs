@@ -14,6 +14,8 @@ pub struct QuiltVersion {
     pub stable: bool,
 }
 
+/// Quilt's loader list is scoped to a Minecraft version and wraps the loader
+/// coordinate in a `loader` object.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuiltLoaderVersion {
@@ -22,34 +24,42 @@ pub struct QuiltLoaderVersion {
     pub stable: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct QuiltInstallerResponse {
-    pub profile: QuiltInstallerProfile,
+#[derive(Debug, Deserialize)]
+struct QuiltLoaderVersionEntry {
+    loader: QuiltLoaderCoordinate,
 }
 
+#[derive(Debug, Deserialize)]
+struct QuiltLoaderCoordinate {
+    version: String,
+    build: u32,
+}
+
+/// A profile returned by Quilt's `/profile/json` endpoint. The endpoint
+/// returns this object directly, not inside a `{ "profile": ... }` wrapper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuiltInstallerProfile {
+    #[serde(default)]
     pub id: String,
-    #[serde(rename = "inheritsFrom")]
+    #[serde(default, rename = "inheritsFrom")]
     pub inherits_from: String,
-    #[serde(rename = "releaseTime")]
+    #[serde(default, rename = "releaseTime")]
     pub release_time: String,
-    #[serde(rename = "mainClass")]
+    #[serde(default, rename = "mainClass")]
     pub main_class: String,
-    #[serde(rename = "javaVersion")]
-    pub java_version: QuiltJavaVersion,
+    #[serde(default, rename = "javaVersion")]
+    pub java_version: Option<QuiltJavaVersion>,
+    #[serde(default)]
     pub libraries: Vec<QuiltLibrary>,
+    #[serde(default)]
     pub arguments: QuiltArguments,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuiltJavaVersion {
-    #[serde(rename = "component")]
     pub component: String,
-    #[serde(rename = "majorVersion")]
     pub major_version: u8,
 }
 
@@ -57,66 +67,87 @@ pub struct QuiltJavaVersion {
 #[serde(rename_all = "camelCase")]
 pub struct QuiltLibrary {
     pub name: String,
+    /// Maven repository base URL, not a direct JAR URL.
+    #[serde(default)]
     pub url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuiltArguments {
+    #[serde(default)]
+    pub game: Vec<String>,
+    #[serde(default)]
+    pub jvm: Vec<String>,
+    /// Older installer profiles use `client` for game arguments.
+    #[serde(default)]
     pub client: Vec<String>,
 }
 
-/// Fetch available Quilt game versions
+fn is_stable_loader(version: &str) -> bool {
+    let lower = version.to_ascii_lowercase();
+    !["-alpha", "-beta", "-rc", "-pre", "-snapshot"]
+        .iter()
+        .any(|marker| lower.contains(marker))
+}
+
+async fn response_text(response: reqwest::Response, operation: &str) -> Result<String> {
+    let status = response.status();
+    let text = response
+        .text()
+        .await
+        .map_err(LauncherError::Http)?;
+    if !status.is_success() {
+        return Err(LauncherError::ModLoader(format!(
+            "{} failed: {} - {}",
+            operation, status, text
+        )));
+    }
+    Ok(text)
+}
+
+/// Fetch available Quilt game versions.
 pub async fn fetch_quilt_versions(client: &Client) -> Result<Vec<QuiltVersion>> {
     let url = format!("{}/versions/game", QUILT_META_URL);
-    let response = client.get(&url).send().await
-        .map_err(|e| LauncherError::Http(e))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt versions: {} - {}", status, text)));
-    }
-
-    // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
-
-    // Parse the JSON from the text
-    let versions: Vec<QuiltVersion> = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Quilt versions JSON: {} - Response: {}", e, text)
-        ))?;
-
-    Ok(versions)
+    let response = client.get(&url).send().await.map_err(LauncherError::Http)?;
+    let text = response_text(response, "Fetching Quilt game versions").await?;
+    serde_json::from_str(&text).map_err(|error| {
+        LauncherError::ModLoader(format!(
+            "Invalid Quilt game versions response: {}. Response begins: {}",
+            error,
+            &text[..text.len().min(300)]
+        ))
+    })
 }
 
-/// Fetch available Quilt loader versions
-pub async fn fetch_quilt_loader_versions(client: &Client) -> Result<Vec<QuiltLoaderVersion>> {
-    let url = format!("{}/versions/loader", QUILT_META_URL);
-    let response = client.get(&url).send().await
-        .map_err(|e| LauncherError::Http(e))?;
+/// Fetch Quilt loader versions compatible with the given Minecraft version.
+pub async fn fetch_quilt_loader_versions(
+    client: &Client,
+    minecraft_version: &str,
+) -> Result<Vec<QuiltLoaderVersion>> {
+    let url = format!("{}/versions/loader/{}", QUILT_META_URL, minecraft_version);
+    let response = client.get(&url).send().await.map_err(LauncherError::Http)?;
+    let text = response_text(response, "Fetching Quilt loader versions").await?;
+    let entries: Vec<QuiltLoaderVersionEntry> = serde_json::from_str(&text).map_err(|error| {
+        LauncherError::ModLoader(format!(
+            "Invalid Quilt loader versions response for Minecraft {}: {}. Response begins: {}",
+            minecraft_version,
+            error,
+            &text[..text.len().min(300)]
+        ))
+    })?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Quilt loader versions: {} - {}", status, text)));
-    }
-
-    // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
-
-    // Parse the JSON from the text
-    let versions: Vec<QuiltLoaderVersion> = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Quilt loader versions JSON: {} - Response: {}", e, text)
-        ))?;
-
-    Ok(versions)
+    Ok(entries
+        .into_iter()
+        .map(|entry| QuiltLoaderVersion {
+            stable: is_stable_loader(&entry.loader.version),
+            version: entry.loader.version,
+            build: entry.loader.build,
+        })
+        .collect())
 }
 
-/// Install Quilt into an instance (generate installer profile)
+/// Fetch a Quilt launch profile for a specific Minecraft and loader version.
 pub async fn install_quilt(
     client: &Client,
     minecraft_version: &str,
@@ -127,39 +158,67 @@ pub async fn install_quilt(
         "{}/versions/loader/{}/{}/profile/json",
         QUILT_META_URL, minecraft_version, loader_version
     );
+    let response = client.get(&url).send().await.map_err(LauncherError::Http)?;
+    let text = response_text(response, "Fetching Quilt installer profile").await?;
+    let profile: QuiltInstallerProfile = serde_json::from_str(&text).map_err(|error| {
+        LauncherError::ModLoader(format!(
+            "Invalid Quilt installer profile for Minecraft {} / loader {}: {}. Response begins: {}",
+            minecraft_version,
+            loader_version,
+            error,
+            &text[..text.len().min(500)]
+        ))
+    })?;
 
-    let response = client.get(&url).send().await
-        .map_err(|e| LauncherError::Http(e))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(
-            format!("Failed to get Quilt installer profile: {} - {}", status, text)
-        ));
+    if profile.id.is_empty() || profile.main_class.is_empty() || profile.libraries.is_empty() {
+        return Err(LauncherError::ModLoader(format!(
+            "Quilt profile for Minecraft {} and loader {} is missing required launch data",
+            minecraft_version, loader_version
+        )));
     }
 
-    // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
-
-    // Parse the JSON from the text
-    let installer: QuiltInstallerResponse = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Quilt installer profile JSON: {} - Response: {}", e, text)
-        ))?;
-
-    Ok(installer.profile)
+    Ok(profile)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_fetch_quilt_versions() {
-        let client = Client::new();
-        let versions = fetch_quilt_versions(&client).await;
-        println!("Quilt versions result: {:?}", versions.is_ok());
+    #[test]
+    fn parses_nested_minecraft_specific_loader_entries() {
+        let entries: Vec<QuiltLoaderVersionEntry> = serde_json::from_str(
+            r#"[{"loader":{"version":"0.28.1","build":7,"maven":"org.quiltmc:quilt-loader:0.28.1"},"intermediary":{"version":"1.21.4"}}]"#,
+        )
+        .unwrap();
+        let entry = entries.into_iter().next().unwrap();
+        assert_eq!(entry.loader.version, "0.28.1");
+        assert_eq!(entry.loader.build, 7);
+        assert!(is_stable_loader(&entry.loader.version));
+    }
+
+    #[test]
+    fn prerelease_quilt_loader_versions_are_not_stable() {
+        assert!(!is_stable_loader("0.20.0-beta.9"));
+        assert!(!is_stable_loader("0.20.0-rc.1"));
+        assert!(is_stable_loader("0.20.0"));
+    }
+
+    #[test]
+    fn parses_top_level_profile_with_optional_java_version() {
+        let profile: QuiltInstallerProfile = serde_json::from_str(
+            r#"{
+                "id":"quilt-loader-0.28.1-1.21.4",
+                "inheritsFrom":"1.21.4",
+                "mainClass":"org.quiltmc.loader.impl.launch.knot.KnotClient",
+                "arguments":{"game":[],"jvm":["-Dquilt.example=true"]},
+                "libraries":[{"name":"org.quiltmc:quilt-loader:0.28.1","url":"https://maven.quiltmc.org/repository/release/"}]
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(profile.main_class, "org.quiltmc.loader.impl.launch.knot.KnotClient");
+        assert!(profile.java_version.is_none());
+        assert_eq!(profile.arguments.jvm, vec!["-Dquilt.example=true"]);
+        assert_eq!(profile.libraries.len(), 1);
     }
 }

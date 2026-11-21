@@ -89,6 +89,8 @@ export const loadersApi = {
   fabricLoaderVersions: () =>
     handleTauriError(invoke<FabricLoaderVersion[]>('loaders_fabric_loader_versions')),
   quiltVersions: () => handleTauriError(invoke<QuiltVersion[]>('loaders_quilt_versions')),
-  quiltLoaderVersions: () =>
-    handleTauriError(invoke<QuiltLoaderVersion[]>('loaders_quilt_loader_versions')),
+  quiltLoaderVersions: (minecraftVersion: string) =>
+    handleTauriError(
+      invoke<QuiltLoaderVersion[]>('loaders_quilt_loader_versions', { minecraftVersion }),
+    ),
 };

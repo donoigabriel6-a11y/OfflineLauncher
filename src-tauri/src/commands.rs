@@ -29,7 +29,8 @@ use crate::events::{
 };
 use crate::versions::inheritance::load_version_json;
 use crate::loaders::fabric::{install_fabric, FabricInstallerProfile};
-use crate::versions::model::{Library, Arguments, Argument, ArgumentValue};
+use crate::loaders::quilt::{install_quilt, QuiltInstallerProfile};
+use crate::versions::model::{Argument, Library};
 use crate::downloads::manager::DownloadTask;
 use crate::launch::classpath::{library_artifact_path, build_classpath, extract_natives, get_natives_dir};
 use crate::versions::manifest::fetch_version_manifest;
@@ -629,7 +630,11 @@ pub async fn instances_open_folder(
 }
 
 /// Build a Maven artifact URL from Fabric's repository base URL and coordinate.
-fn fabric_library_url(repository: Option<&str>, coordinate: &str) -> Option<String> {
+fn loader_library_url(
+    repository: Option<&str>,
+    coordinate: &str,
+    default_repository: &str,
+) -> Option<String> {
     let (coordinate, extension) = coordinate
         .split_once('@')
         .map(|(coordinate, extension)| (coordinate, extension))
@@ -643,8 +648,49 @@ fn fabric_library_url(repository: Option<&str>, coordinate: &str) -> Option<Stri
     let classifier = parts.get(3).map(|value| format!("-{value}")).unwrap_or_default();
     let file_name = format!("{artifact}-{version}{classifier}.{extension}");
     let relative_path = format!("{}/{}/{}/{}", group.replace('.', "/"), artifact, version, file_name);
-    let repository = repository.unwrap_or("https://maven.fabricmc.net/").trim_end_matches('/');
+    let repository = repository.unwrap_or(default_repository).trim_end_matches('/');
     Some(format!("{repository}/{relative_path}"))
+}
+
+/// Download loader libraries to their Maven-coordinate paths before classpath creation.
+async fn download_loader_libraries(
+    download_manager: &crate::downloads::DownloadManager,
+    app: &AppHandle,
+    version_id: &str,
+    default_repository: &str,
+    libraries: impl IntoIterator<Item = (String, Option<String>)>,
+) -> Result<()> {
+    let libraries_dir = crate::app_dirs::get_libraries_dir()?;
+    for (name, repository) in libraries {
+        let url = loader_library_url(repository.as_deref(), &name, default_repository).ok_or_else(|| {
+            LauncherError::ModLoader(format!("Invalid loader library Maven coordinate: {}", name))
+        })?;
+        let library = Library {
+            name: name.clone(),
+            downloads: None,
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+        let artifact_path = library_artifact_path(&library, &libraries_dir)?;
+        if artifact_path.exists() {
+            continue;
+        }
+        if let Some(parent) = artifact_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        let task = DownloadTask {
+            url,
+            destination: artifact_path,
+            expected_sha1: None,
+            file_name: name.clone(),
+            stage: crate::events::DownloadStage::Libraries,
+            version_id: version_id.to_string(),
+        };
+        download_manager.download_file(task, Some(app)).await?;
+    }
+    Ok(())
 }
 
 /// Merge Fabric installer profile into version JSON
@@ -661,7 +707,11 @@ fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricIns
     }
 
     for fabric_lib in fabric_profile.libraries {
-        let Some(url) = fabric_library_url(fabric_lib.url.as_deref(), &fabric_lib.name) else {
+        let Some(url) = loader_library_url(
+            fabric_lib.url.as_deref(),
+            &fabric_lib.name,
+            "https://maven.fabricmc.net/",
+        ) else {
             continue;
         };
         let lib = Library {
@@ -692,6 +742,91 @@ fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricIns
     );
     version_json.arguments.jvm.extend(
         fabric_profile.arguments.jvm.into_iter().map(Argument::Simple),
+    );
+
+    version_json
+}
+
+#[cfg(test)]
+mod loader_library_tests {
+    use super::loader_library_url;
+
+    #[test]
+    fn resolves_repository_base_to_maven_artifact_url() {
+        assert_eq!(
+            loader_library_url(
+                Some("https://maven.quiltmc.org/repository/release/"),
+                "org.quiltmc:quilt-loader:0.28.1",
+                "https://maven.fabricmc.net/",
+            )
+            .as_deref(),
+            Some("https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/0.28.1/quilt-loader-0.28.1.jar"),
+        );
+    }
+
+    #[test]
+    fn resolves_maven_classifiers_and_extensions() {
+        assert_eq!(
+            loader_library_url(
+                None,
+                "org.example:sample:1.2.3:natives-windows@zip",
+                "https://example.invalid/maven",
+            )
+            .as_deref(),
+            Some("https://example.invalid/maven/org/example/sample/1.2.3/sample-1.2.3-natives-windows.zip"),
+        );
+    }
+}
+
+/// Merge Quilt's launch profile into the inherited Minecraft metadata.
+fn merge_quilt_profile(mut version_json: VersionJson, profile: QuiltInstallerProfile) -> VersionJson {
+    if !profile.main_class.is_empty() {
+        version_json.main_class = profile.main_class;
+    }
+
+    if let Some(java_version) = profile.java_version {
+        version_json.java_version = crate::versions::model::JavaVersion {
+            component: java_version.component,
+            major_version: java_version.major_version,
+        };
+    }
+
+    for quilt_library in profile.libraries {
+        let Some(url) = loader_library_url(
+            quilt_library.url.as_deref(),
+            &quilt_library.name,
+            "https://maven.quiltmc.org/repository/release/",
+        ) else {
+            continue;
+        };
+        let library = Library {
+            name: quilt_library.name.clone(),
+            downloads: Some(crate::versions::model::LibraryDownloads {
+                artifact: Some(crate::versions::model::DownloadInfo {
+                    url,
+                    sha1: String::new(),
+                    size: 0,
+                    path: None,
+                }),
+                classifiers: None,
+            }),
+            natives: None,
+            rules: vec![],
+            extract: None,
+            url: None,
+        };
+        version_json.libraries.retain(|existing| existing.name != quilt_library.name);
+        version_json.libraries.push(library);
+    }
+
+    version_json.arguments.game.extend(
+        profile.arguments.game.into_iter().map(Argument::Simple),
+    );
+    version_json.arguments.game.extend(
+        profile.arguments.client.into_iter().map(Argument::Simple),
+    );
+    version_json.arguments.jvm.extend(
+        profile.arguments.jvm.into_iter().map(Argument::Simple),
     );
 
     version_json
@@ -773,48 +908,64 @@ pub async fn launch_start(
             &version_dir,
         ).await?;
 
-        // Download Fabric libraries
-        let libraries_dir = crate::app_dirs::get_libraries_dir()?;
-        for fabric_lib in &fabric_profile.libraries {
-            if let Some(url) = fabric_library_url(fabric_lib.url.as_deref(), &fabric_lib.name) {
-                let artifact_path = library_artifact_path(&Library {
-                    name: fabric_lib.name.clone(),
-                    downloads: Some(crate::versions::model::LibraryDownloads {
-                        artifact: Some(crate::versions::model::DownloadInfo {
-                            url: url.clone(),
-                            sha1: String::new(),
-                            size: 0,
-                            path: None,
-                        }),
-                        classifiers: None,
-                    }),
-                    natives: None,
-                    rules: vec![],
-                    extract: None,
-                    url: None,
-                }, &libraries_dir)?;
-
-                if !artifact_path.exists() {
-                    if let Some(parent) = artifact_path.parent() {
-                        tokio::fs::create_dir_all(parent).await?;
-                    }
-                    let task = DownloadTask {
-                        url: url.clone(),
-                        destination: artifact_path.clone(),
-                        expected_sha1: None, // Fabric installer doesn't provide SHA1
-                        file_name: fabric_lib.name.clone(),
-                        stage: crate::events::DownloadStage::Libraries,
-                        version_id: instance.version_id.clone(),
-                    };
-                    if let Err(e) = state.download_manager.download_file(task, Some(&app)).await {
-                        tracing::warn!("Failed to download Fabric library {}: {}", fabric_lib.name, e);
-                    }
-                }
-            }
-        }
+        // Download Fabric libraries to the matching Maven paths before classpath creation.
+        download_loader_libraries(
+            &state.download_manager,
+            &app,
+            &instance.version_id,
+            "https://maven.fabricmc.net/",
+            fabric_profile
+                .libraries
+                .iter()
+                .map(|library| (library.name.clone(), library.url.clone())),
+        )
+        .await?;
 
         // Merge Fabric profile into version JSON
         version_json = merge_fabric_profile(version_json, fabric_profile);
+    } else if instance.loader == crate::instances::model::ModLoader::Quilt {
+        let configured_version = instance.loader_version.as_deref().unwrap_or("latest");
+        let loader_version = if configured_version.eq_ignore_ascii_case("latest") {
+            crate::loaders::quilt::fetch_quilt_loader_versions(
+                &state.http_client,
+                &instance.version_id,
+            )
+            .await?
+            .into_iter()
+            .filter(|version| version.stable)
+            .max_by_key(|version| version.build)
+            .map(|version| version.version)
+            .ok_or_else(|| {
+                LauncherError::ModLoader(format!(
+                    "No stable Quilt Loader version is available for Minecraft {}",
+                    instance.version_id
+                ))
+            })?
+        } else {
+            configured_version.to_string()
+        };
+
+        let quilt_profile = install_quilt(
+            &state.http_client,
+            &instance.version_id,
+            &loader_version,
+            &version_dir,
+        )
+        .await?;
+
+        download_loader_libraries(
+            &state.download_manager,
+            &app,
+            &instance.version_id,
+            "https://maven.quiltmc.org/repository/release/",
+            quilt_profile
+                .libraries
+                .iter()
+                .map(|library| (library.name.clone(), library.url.clone())),
+        )
+        .await?;
+
+        version_json = merge_quilt_profile(version_json, quilt_profile);
     }
 
     // Resolve Java - use version's required Java version from version JSON
@@ -962,6 +1113,9 @@ pub async fn loaders_quilt_versions(state: State<'_, Arc<AppState>>) -> Result<V
 }
 
 #[tauri::command]
-pub async fn loaders_quilt_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltLoaderVersion>> {
-    fetch_quilt_loader_versions(&state.http_client).await
+pub async fn loaders_quilt_loader_versions(
+    state: State<'_, Arc<AppState>>,
+    minecraft_version: String,
+) -> Result<Vec<crate::loaders::quilt::QuiltLoaderVersion>> {
+    fetch_quilt_loader_versions(&state.http_client, &minecraft_version).await
 }
