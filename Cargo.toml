@@ -39,6 +39,7 @@ indicatif = "0.17"
 toml = "0.8"
 notify = "6.0"
 walkdir = "2.0"
+keyring = { version = "3.6.2", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent", "crypto-rust"] }
 
 [profile.release]
 lto = true
