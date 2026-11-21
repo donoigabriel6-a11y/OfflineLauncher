@@ -6,6 +6,7 @@ import {
   Users,
   Package,
   FolderKanban,
+  Store,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,7 @@ const navigation = [
   { path: '/accounts', label: 'Accounts', icon: Users },
   { path: '/versions', label: 'Versions', icon: Package },
   { path: '/instances', label: 'Instances', icon: FolderKanban },
+  { path: '/content', label: 'Content Browser', icon: Store },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
