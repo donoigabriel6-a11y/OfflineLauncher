@@ -4,37 +4,55 @@
 
 #![allow(clippy::too_many_arguments)]
 
-pub mod error;
 pub mod app_dirs;
 pub mod config;
+pub mod error;
 pub mod events;
 
 pub mod accounts;
-pub mod versions;
+pub mod content;
 pub mod downloads;
-pub mod java;
 pub mod instances;
+pub mod java;
 pub mod launch;
 pub mod loaders;
+pub mod versions;
 
 mod commands;
 
-use tauri::Manager;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tauri::Manager;
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 // Re-export commonly used types
-pub use error::{LauncherError, Result};
+pub use accounts::{
+    generate_offline_uuid, validate_username, Account, AccountStorage, AccountType, OfflineAccount,
+    UserType,
+};
 pub use config::Config;
-pub use accounts::{Account, AccountStorage, OfflineAccount, AccountType, UserType, validate_username, generate_offline_uuid};
-pub use versions::{VersionManifest, VersionEntry, VersionJson, VersionType, AssetIndexObject, fetch_version_manifest};
-pub use downloads::{DownloadManager, DownloadOptions, DownloadTask, DownloadProgress, DownloadStage};
-pub use java::{JavaManager, JavaInstallation, JavaSelection, JavaSource, detect_system_java};
-pub use instances::{InstanceStorage, Instance, ModLoader, MemorySettings, JavaSettings, Resolution};
-pub use launch::{LaunchArguments, GameProcess, LaunchHandle, launch_game, get_natives_dir, extract_natives, library_artifact_path, library_native_path};
-pub use loaders::{fetch_fabric_versions, fetch_fabric_loader_versions, install_fabric, fetch_quilt_versions, fetch_quilt_loader_versions, install_quilt};
+pub use content::{ContentState, ContentStorage};
+pub use downloads::{
+    DownloadManager, DownloadOptions, DownloadProgress, DownloadStage, DownloadTask,
+};
+pub use error::{LauncherError, Result};
+pub use instances::{
+    Instance, InstanceStorage, JavaSettings, MemorySettings, ModLoader, Resolution,
+};
+pub use java::{detect_system_java, JavaInstallation, JavaManager, JavaSelection, JavaSource};
+pub use launch::{
+    extract_natives, get_natives_dir, launch_game, library_artifact_path, library_native_path,
+    GameProcess, LaunchArguments, LaunchHandle,
+};
+pub use loaders::{
+    fetch_fabric_loader_versions, fetch_fabric_versions, fetch_quilt_loader_versions,
+    fetch_quilt_versions, install_fabric, install_quilt,
+};
+pub use versions::{
+    fetch_version_manifest, AssetIndexObject, VersionEntry, VersionJson, VersionManifest,
+    VersionType,
+};
 
 /// Application state shared across commands
 pub struct AppState {
@@ -44,6 +62,7 @@ pub struct AppState {
     pub download_manager: DownloadManager,
     pub java_manager: JavaManager,
     pub http_client: reqwest::Client,
+    pub content_state: ContentState,
     pub running_processes: Mutex<HashMap<Uuid, LaunchHandle>>,
 }
 
@@ -61,6 +80,9 @@ impl AppState {
             download_manager: DownloadManager::new(DownloadOptions::default()),
             java_manager: JavaManager::new(),
             http_client,
+            content_state: ContentState {
+                storage: ContentStorage::new().expect("content storage should initialize"),
+            },
             running_processes: Mutex::new(HashMap::new()),
         }
     }
@@ -82,6 +104,9 @@ pub fn initialize_app(app: &tauri::AppHandle) -> Result<()> {
 
     // Load instances
     tauri::async_runtime::block_on(state.instance_storage.load())?;
+
+    // Load content storage (installed content, curseforge key)
+    tauri::async_runtime::block_on(state.content_state.storage.load())?;
 
     // Store state
     app.manage(Arc::new(state));
@@ -131,6 +156,14 @@ pub fn run() {
             commands::loaders_fabric_loader_versions,
             commands::loaders_quilt_versions,
             commands::loaders_quilt_loader_versions,
+            content::commands::content_search,
+            content::commands::content_versions,
+            content::commands::content_install,
+            content::commands::content_list_installed,
+            content::commands::content_uninstall,
+            content::commands::curseforge_key_status,
+            content::commands::curseforge_key_set,
+            content::commands::curseforge_key_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
