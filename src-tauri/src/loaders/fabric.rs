@@ -78,8 +78,15 @@ pub async fn fetch_fabric_versions(client: &Client) -> Result<Vec<FabricVersion>
         return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric versions: {} - {}", status, text)));
     }
 
-    let versions: Vec<FabricVersion> = response.json().await
+    // Get the raw text first to debug JSON parsing issues
+    let text = response.text().await
         .map_err(|e| LauncherError::Http(e))?;
+
+    // Parse the JSON from the text
+    let versions: Vec<FabricVersion> = serde_json::from_str(&text)
+        .map_err(|e| LauncherError::ModLoader(
+            format!("Failed to parse Fabric versions JSON: {} - Response: {}", e, text)
+        ))?;
 
     Ok(versions)
 }
@@ -96,8 +103,15 @@ pub async fn fetch_fabric_loader_versions(client: &Client) -> Result<Vec<FabricL
         return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric loader versions: {} - {}", status, text)));
     }
 
-    let versions: Vec<FabricLoaderVersion> = response.json().await
+    // Get the raw text first to debug JSON parsing issues
+    let text = response.text().await
         .map_err(|e| LauncherError::Http(e))?;
+
+    // Parse the JSON from the text
+    let versions: Vec<FabricLoaderVersion> = serde_json::from_str(&text)
+        .map_err(|e| LauncherError::ModLoader(
+            format!("Failed to parse Fabric loader versions JSON: {} - Response: {}", e, text)
+        ))?;
 
     Ok(versions)
 }
@@ -125,8 +139,15 @@ pub async fn install_fabric(
         ));
     }
 
-    let installer: FabricInstallerResponse = response.json().await
+    // Get the raw text first to debug JSON parsing issues
+    let text = response.text().await
         .map_err(|e| LauncherError::Http(e))?;
+
+    // Parse the JSON from the text
+    let installer: FabricInstallerResponse = serde_json::from_str(&text)
+        .map_err(|e| LauncherError::ModLoader(
+            format!("Failed to parse Fabric installer profile JSON: {} - Response: {}", e, text)
+        ))?;
 
     Ok(installer.profile)
 }
