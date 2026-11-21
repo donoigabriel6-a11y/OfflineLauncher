@@ -106,8 +106,7 @@ pub async fn modrinth_search(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     let projects = response
         .hits
@@ -160,8 +159,7 @@ pub async fn modrinth_versions(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     Ok(versions
         .into_iter()
@@ -198,8 +196,7 @@ pub async fn modrinth_version_file(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     let file = version
         .files
@@ -293,8 +290,7 @@ pub async fn curseforge_search(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     let projects = response
         .data
@@ -325,12 +321,12 @@ pub async fn curseforge_versions(
     minecraft_version: &str,
     _loader: Option<&str>,
 ) -> Result<Vec<ContentVersion>> {
-    let mut params = HashMap::new();
+    let mut params: HashMap<String, String> = HashMap::new();
     if !minecraft_version.is_empty() {
-        params.insert("gameVersion", minecraft_version);
+        params.insert("gameVersion".to_string(), minecraft_version.to_string());
     }
-    params.insert("pageSize", "100");
-    params.insert("pageIndex", "0");
+    params.insert("pageSize".to_string(), "100".to_string());
+    params.insert("pageIndex".to_string(), "0".to_string());
 
     let url = format!("{CURSEFORGE_API}/mods/{project_id}/files");
     let response: CurseforgeFilesResponse = client
@@ -344,8 +340,7 @@ pub async fn curseforge_versions(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     Ok(response
         .data
@@ -389,8 +384,7 @@ pub async fn curseforge_version_file(
         .error_for_status()
         .map_err(LauncherError::Http)?
         .json()
-        .await
-        .map_err(LauncherError::Serde)?;
+        .await?;
 
     Ok((response.data.download_url, response.data.file_name))
 }
