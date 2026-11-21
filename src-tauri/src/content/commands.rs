@@ -8,7 +8,7 @@ use crate::content::client::{
 };
 use crate::content::storage::ContentStorage;
 use crate::content::types::{
-    ContentCategory, ContentInstallArgs, ContentSearchArgs,
+    ContentCategory, ContentInstallArgs, ContentInstallResult, ContentSearchArgs,
     ContentSearchResult, ContentUninstallArgs, ContentVersion, ContentVersionsArgs,
     CurseforgeKeySetArgs, InstalledContent,
 };
