@@ -658,7 +658,7 @@ async fn download_loader_libraries(
     app: &AppHandle,
     version_id: &str,
     default_repository: &str,
-    libraries: impl IntoIterator<Item = (String, Option<String>)>,
+    libraries: Vec<(String, Option<String>)>,
 ) -> Result<()> {
     let libraries_dir = crate::app_dirs::get_libraries_dir()?;
     for (name, repository) in libraries {
@@ -917,7 +917,8 @@ pub async fn launch_start(
             fabric_profile
                 .libraries
                 .iter()
-                .map(|library| (library.name.clone(), library.url.clone())),
+                .map(|library| (library.name.clone(), library.url.clone()))
+                .collect(),
         )
         .await?;
 
@@ -961,7 +962,8 @@ pub async fn launch_start(
             quilt_profile
                 .libraries
                 .iter()
-                .map(|library| (library.name.clone(), library.url.clone())),
+                .map(|library| (library.name.clone(), library.url.clone()))
+                .collect(),
         )
         .await?;
 
