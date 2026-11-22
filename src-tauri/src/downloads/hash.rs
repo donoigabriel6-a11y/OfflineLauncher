@@ -8,14 +8,15 @@ use tokio::io::AsyncReadExt;
 
 /// Compute SHA1 hash of a file
 pub async fn compute_sha1(path: &Path) -> Result<String> {
-    let mut file = File::open(path).await
-        .map_err(|e| LauncherError::Io(e))?;
+    let mut file = File::open(path).await.map_err(|e| LauncherError::Io(e))?;
 
     let mut hasher = Sha1::new();
     let mut buffer = vec![0u8; 8192];
 
     loop {
-        let n = file.read(&mut buffer).await
+        let n = file
+            .read(&mut buffer)
+            .await
             .map_err(|e| LauncherError::Io(e))?;
         if n == 0 {
             break;

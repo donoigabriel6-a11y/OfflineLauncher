@@ -1,40 +1,36 @@
 //! Tauri commands module
 
-use tauri::{State, AppHandle};
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tauri::{AppHandle, State};
 use uuid::Uuid;
 
-use crate::{
-    AppState, Config, Account, OfflineAccount, VersionManifest, VersionEntry, VersionJson,
-    DownloadStage,
-    JavaInstallation, JavaSelection,
-    Instance,
-    LaunchArguments, launch_game,
-    fetch_fabric_versions, fetch_fabric_loader_versions,
-    fetch_quilt_versions, fetch_quilt_loader_versions,
-    Result, LauncherError,
-};
-use tracing::{error, info};
 use crate::accounts::model::validate_username;
 use crate::accounts::uuid::generate_offline_uuid;
 use crate::app_dirs::get_app_data_dir;
+use crate::downloads::manager::DownloadTask;
 use crate::events::{
-    emit_download_progress, emit_download_complete,
-    emit_account_changed, emit_instance_changed, emit_launch_status,
-    DownloadProgressEvent, DownloadCompleteEvent,
-    AccountChangedEvent, AccountAction, AccountInfo,
-    InstanceChangedEvent, InstanceAction, InstanceInfo,
-    LaunchStatusEvent, LaunchStatus,
+    emit_account_changed, emit_download_complete, emit_download_progress, emit_instance_changed,
+    emit_launch_status, AccountAction, AccountChangedEvent, AccountInfo, DownloadCompleteEvent,
+    DownloadProgressEvent, InstanceAction, InstanceChangedEvent, InstanceInfo, LaunchStatus,
+    LaunchStatusEvent,
 };
-use crate::versions::inheritance::load_version_json;
+use crate::java::detect_system_java;
+use crate::launch::classpath::{
+    build_classpath, extract_natives, get_natives_dir, library_artifact_path,
+};
 use crate::loaders::fabric::{install_fabric, FabricInstallerProfile};
 use crate::loaders::quilt::{install_quilt, QuiltInstallerProfile};
-use crate::versions::model::{Argument, Library};
-use crate::downloads::manager::DownloadTask;
-use crate::launch::classpath::{library_artifact_path, build_classpath, extract_natives, get_natives_dir};
+use crate::versions::inheritance::load_version_json;
 use crate::versions::manifest::fetch_version_manifest;
-use crate::java::detect_system_java;
+use crate::versions::model::{Argument, Library};
+use crate::{
+    fetch_fabric_loader_versions, fetch_fabric_versions, fetch_quilt_loader_versions,
+    fetch_quilt_versions, launch_game, Account, AppState, Config, DownloadStage, Instance,
+    JavaInstallation, JavaSelection, LaunchArguments, LauncherError, OfflineAccount, Result,
+    VersionEntry, VersionJson, VersionManifest,
+};
+use tracing::{error, info};
 
 // ==================== CONFIG COMMANDS ====================
 
@@ -80,8 +76,15 @@ pub async fn accounts_create(
     validate_username(&username)?;
 
     // Check if username already exists
-    if state.account_storage.get_by_username(&username).await.is_some() {
-        return Err(LauncherError::InvalidArgument("Username already exists".into()));
+    if state
+        .account_storage
+        .get_by_username(&username)
+        .await
+        .is_some()
+    {
+        return Err(LauncherError::InvalidArgument(
+            "Username already exists".into(),
+        ));
     }
 
     let account = OfflineAccount::new(username)?;
@@ -89,15 +92,18 @@ pub async fn accounts_create(
     state.account_storage.add(Box::new(account)).await?;
 
     // Emit event
-    emit_account_changed(&app, AccountChangedEvent {
-        action: AccountAction::Created,
-        account: AccountInfo {
-            id: account_clone.id().to_string(),
-            username: account_clone.username().to_string(),
-            uuid: account_clone.uuid().to_string(),
-            account_type: "offline".to_string(),
+    emit_account_changed(
+        &app,
+        AccountChangedEvent {
+            action: AccountAction::Created,
+            account: AccountInfo {
+                id: account_clone.id().to_string(),
+                username: account_clone.username().to_string(),
+                uuid: account_clone.uuid().to_string(),
+                account_type: "offline".to_string(),
+            },
         },
-    })?;
+    )?;
 
     Ok(account_clone)
 }
@@ -111,7 +117,10 @@ pub async fn accounts_update(
     skin_path: Option<String>,
 ) -> Result<OfflineAccount> {
     let uuid = Uuid::parse_str(&id)?;
-    let mut account = state.account_storage.get(uuid).await
+    let mut account = state
+        .account_storage
+        .get(uuid)
+        .await
         .ok_or(LauncherError::AccountNotFound(id))?;
 
     if let Some(username) = username {
@@ -120,28 +129,36 @@ pub async fn accounts_update(
     }
 
     if let Some(skin_path) = skin_path {
-        account.set_skin_path(Some(PathBuf::from(skin_path))).await?;
+        account
+            .set_skin_path(Some(PathBuf::from(skin_path)))
+            .await?;
     }
 
     let account_clone = account.clone_box();
     state.account_storage.update(account).await?;
 
     // Emit event
-    emit_account_changed(&app, AccountChangedEvent {
-        action: AccountAction::Updated,
-        account: AccountInfo {
-            id: account_clone.id().to_string(),
-            username: account_clone.username().to_string(),
-            uuid: account_clone.uuid().to_string(),
-            account_type: "offline".to_string(),
+    emit_account_changed(
+        &app,
+        AccountChangedEvent {
+            action: AccountAction::Updated,
+            account: AccountInfo {
+                id: account_clone.id().to_string(),
+                username: account_clone.username().to_string(),
+                uuid: account_clone.uuid().to_string(),
+                account_type: "offline".to_string(),
+            },
         },
-    })?;
+    )?;
 
     // Downcast to return OfflineAccount
-    account_clone.as_any()
+    account_clone
+        .as_any()
         .downcast_ref::<OfflineAccount>()
         .cloned()
-        .ok_or(LauncherError::InvalidArgument("Failed to downcast account".into()))
+        .ok_or(LauncherError::InvalidArgument(
+            "Failed to downcast account".into(),
+        ))
 }
 
 #[tauri::command]
@@ -151,7 +168,10 @@ pub async fn accounts_delete(
     id: String,
 ) -> Result<()> {
     let uuid = Uuid::parse_str(&id)?;
-    let account = state.account_storage.get(uuid).await
+    let account = state
+        .account_storage
+        .get(uuid)
+        .await
         .ok_or(LauncherError::AccountNotFound(id.clone()))?;
 
     let account_info = AccountInfo {
@@ -164,10 +184,10 @@ pub async fn accounts_delete(
     state.account_storage.delete(uuid).await?;
 
     // Emit event
-    emit_account_changed(&app, AccountChangedEvent {
-        action: AccountAction::Deleted,
-        account: account_info,
-    })?;
+    emit_account_changed(
+        &app,
+        AccountChangedEvent { action: AccountAction::Deleted, account: account_info },
+    )?;
 
     Ok(())
 }
@@ -219,14 +239,19 @@ pub async fn versions_download(
 
     let manifest = fetch_version_manifest(&state.http_client).await?;
 
-    let version_entry = manifest.versions.iter()
+    let version_entry = manifest
+        .versions
+        .iter()
         .find(|v| v.id == version_id)
         .ok_or(LauncherError::VersionNotFound(version_id.clone()))?;
 
     // Download version JSON
-    let response = state.http_client.get(&version_entry.url)
+    let response = state
+        .http_client
+        .get(&version_entry.url)
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
-        .send().await
+        .send()
+        .await
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
@@ -238,19 +263,21 @@ pub async fn versions_download(
         )));
     }
 
-    let version_body = response.bytes().await
-        .map_err(|e| LauncherError::Download(format!(
+    let version_body = response.bytes().await.map_err(|e| {
+        LauncherError::Download(format!(
             "Failed reading Minecraft {} metadata from {}: {}",
             version_id, version_entry.url, e
-        )))?;
-    let version_json: VersionJson = serde_json::from_slice(&version_body)
-        .map_err(|e| LauncherError::Download(format!(
+        ))
+    })?;
+    let version_json: VersionJson = serde_json::from_slice(&version_body).map_err(|e| {
+        LauncherError::Download(format!(
             "Minecraft {} returned invalid version metadata from {}: {}. Response begins: {}",
             version_id,
             version_entry.url,
             e,
             String::from_utf8_lossy(&version_body[..version_body.len().min(240)])
-        )))?;
+        ))
+    })?;
     if version_json.id != version_id {
         return Err(LauncherError::Download(format!(
             "Mojang metadata ID mismatch: requested {}, received {}",
@@ -265,13 +292,16 @@ pub async fn versions_download(
     tokio::fs::write(&json_path, serde_json::to_string_pretty(&version_json)?).await?;
 
     // Emit progress for version JSON
-    emit_download_progress(&app, DownloadProgressEvent {
-        version_id: version_id.clone(),
-        file_name: format!("{}.json", version_id),
-        downloaded: 1,
-        total: 1,
-        stage: DownloadStage::VersionJson,
-    })?;
+    emit_download_progress(
+        &app,
+        DownloadProgressEvent {
+            version_id: version_id.clone(),
+            file_name: format!("{}.json", version_id),
+            downloaded: 1,
+            total: 1,
+            stage: DownloadStage::VersionJson,
+        },
+    )?;
 
     // Download client jar
     let libraries_dir = crate::app_dirs::get_libraries_dir()?;
@@ -283,7 +313,11 @@ pub async fn versions_download(
     // 1. Client jar
     {
         let client_download = &version_json.downloads.client;
-        info!("Downloading client jar: {} -> {}", client_download.url, version_dir.join(format!("{}.jar", version_id)).display());
+        info!(
+            "Downloading client jar: {} -> {}",
+            client_download.url,
+            version_dir.join(format!("{}.jar", version_id)).display()
+        );
         let client_jar_path = version_dir.join(format!("{}.jar", version_id));
         download_tasks.push(crate::downloads::DownloadTask {
             url: client_download.url.clone(),
@@ -305,13 +339,18 @@ pub async fn versions_download(
         if let Some(downloads) = &library.downloads {
             // Main artifact
             if let Some(artifact) = &downloads.artifact {
-                let artifact_path = crate::launch::classpath::library_artifact_path(library, &libraries_dir)?;
+                let artifact_path =
+                    crate::launch::classpath::library_artifact_path(library, &libraries_dir)?;
                 library_count += 1;
                 download_tasks.push(crate::downloads::DownloadTask {
                     url: artifact.url.clone(),
                     destination: artifact_path,
                     expected_sha1: Some(artifact.sha1.clone()),
-                    file_name: format!("{}:{}", library.name, artifact.url.split('/').last().unwrap_or("")),
+                    file_name: format!(
+                        "{}:{}",
+                        library.name,
+                        artifact.url.split('/').last().unwrap_or("")
+                    ),
                     stage: DownloadStage::Libraries,
                     version_id: version_id.clone(),
                 });
@@ -320,7 +359,11 @@ pub async fn versions_download(
             // Classifiers (including natives)
             if let Some(classifiers) = &downloads.classifiers {
                 for (classifier, download_info) in classifiers {
-                    let path = crate::launch::classpath::library_native_path(library, &libraries_dir, classifier)?;
+                    let path = crate::launch::classpath::library_native_path(
+                        library,
+                        &libraries_dir,
+                        classifier,
+                    )?;
                     library_count += 1;
                     download_tasks.push(crate::downloads::DownloadTask {
                         url: download_info.url.clone(),
@@ -337,8 +380,14 @@ pub async fn versions_download(
     info!("Queued {} library downloads", library_count);
 
     // 3. Assets index
-    let asset_index_path = assets_dir.join("indexes").join(format!("{}.json", version_json.asset_index.id));
-    info!("Downloading assets index: {} -> {}", version_json.asset_index.url, asset_index_path.display());
+    let asset_index_path = assets_dir
+        .join("indexes")
+        .join(format!("{}.json", version_json.asset_index.id));
+    info!(
+        "Downloading assets index: {} -> {}",
+        version_json.asset_index.url,
+        asset_index_path.display()
+    );
     download_tasks.push(crate::downloads::DownloadTask {
         url: version_json.asset_index.url.clone(),
         destination: asset_index_path,
@@ -351,40 +400,50 @@ pub async fn versions_download(
     // Execute all downloads
     let download_manager = state.download_manager.clone();
     info!("Starting {} download tasks", download_tasks.len());
-    let results = download_manager.download_all(download_tasks, Some(&app)).await;
+    let results = download_manager
+        .download_all(download_tasks, Some(&app))
+        .await;
 
     // Handle results
     match results {
         Ok(_) => {
             // Now download actual assets from the assets index
             let assets_dir = crate::app_dirs::get_assets_dir()?;
-            let asset_index_path = assets_dir.join("indexes").join(format!("{}.json", version_json.asset_index.id));
+            let asset_index_path = assets_dir
+                .join("indexes")
+                .join(format!("{}.json", version_json.asset_index.id));
 
             // Read the downloaded asset index
             let asset_index_content = match tokio::fs::read_to_string(&asset_index_path).await {
                 Ok(content) => content,
                 Err(e) => {
                     error!("Failed to read asset index file: {}", e);
-                    emit_download_complete(&app, DownloadCompleteEvent {
-                        version_id: version_id.clone(),
-                        success: false,
-                        error: Some(e.to_string()),
-                    })?;
+                    emit_download_complete(
+                        &app,
+                        DownloadCompleteEvent {
+                            version_id: version_id.clone(),
+                            success: false,
+                            error: Some(e.to_string()),
+                        },
+                    )?;
                     return Err(LauncherError::Io(e));
-                }
+                },
             };
 
             let asset_index: serde_json::Value = match serde_json::from_str(&asset_index_content) {
                 Ok(v) => v,
                 Err(e) => {
                     error!("Failed to parse asset index JSON: {}", e);
-                    emit_download_complete(&app, DownloadCompleteEvent {
-                        version_id: version_id.clone(),
-                        success: false,
-                        error: Some(e.to_string()),
-                    })?;
+                    emit_download_complete(
+                        &app,
+                        DownloadCompleteEvent {
+                            version_id: version_id.clone(),
+                            success: false,
+                            error: Some(e.to_string()),
+                        },
+                    )?;
                     return Err(LauncherError::Serde(e));
-                }
+                },
             };
 
             // Parse asset objects
@@ -392,14 +451,18 @@ pub async fn versions_download(
                 Some(obj) => obj,
                 None => {
                     error!("Invalid assets index: missing objects");
-                    let error = LauncherError::Launch("Invalid assets index: missing objects".into());
-                    emit_download_complete(&app, DownloadCompleteEvent {
-                        version_id: version_id.clone(),
-                        success: false,
-                        error: Some(error.to_string()),
-                    })?;
+                    let error =
+                        LauncherError::Launch("Invalid assets index: missing objects".into());
+                    emit_download_complete(
+                        &app,
+                        DownloadCompleteEvent {
+                            version_id: version_id.clone(),
+                            success: false,
+                            error: Some(error.to_string()),
+                        },
+                    )?;
                     return Err(error);
-                }
+                },
             };
 
             info!("Found {} assets to download", objects.len());
@@ -416,16 +479,23 @@ pub async fn versions_download(
                             "Invalid SHA-1 hash for asset '{}': {}",
                             asset_path, hash
                         ));
-                        emit_download_complete(&app, DownloadCompleteEvent {
-                            version_id: version_id.clone(),
-                            success: false,
-                            error: Some(error.to_string()),
-                        })?;
+                        emit_download_complete(
+                            &app,
+                            DownloadCompleteEvent {
+                                version_id: version_id.clone(),
+                                success: false,
+                                error: Some(error.to_string()),
+                            },
+                        )?;
                         return Err(error);
                     }
 
                     // Asset URL format: https://resources.download.minecraft.net/{first2}/{hash}
-                    let url = format!("https://resources.download.minecraft.net/{}/{}", &hash[..2], hash);
+                    let url = format!(
+                        "https://resources.download.minecraft.net/{}/{}",
+                        &hash[..2],
+                        hash
+                    );
 
                     // Destination: assets/objects/{first2}/{hash}
                     let dest_dir = assets_objects_dir.join(&hash[..2]);
@@ -452,11 +522,14 @@ pub async fn versions_download(
                     let chunk_vec = chunk.to_vec();
                     if let Err(e) = download_manager.download_all(chunk_vec, Some(&app)).await {
                         error!("Asset batch download failed: {}", e);
-                        emit_download_complete(&app, DownloadCompleteEvent {
-                            version_id: version_id.clone(),
-                            success: false,
-                            error: Some(e.to_string()),
-                        })?;
+                        emit_download_complete(
+                            &app,
+                            DownloadCompleteEvent {
+                                version_id: version_id.clone(),
+                                success: false,
+                                error: Some(e.to_string()),
+                            },
+                        )?;
                         return Err(e);
                     }
                 }
@@ -465,29 +538,37 @@ pub async fn versions_download(
             // Write the completion marker only after the client, libraries,
             // asset index, and all asset objects have been downloaded and verified.
             tokio::fs::write(&install_marker, b"installed").await?;
-            emit_download_complete(&app, DownloadCompleteEvent {
-                version_id: version_id.clone(),
-                success: true,
-                error: None,
-            })?;
+            emit_download_complete(
+                &app,
+                DownloadCompleteEvent {
+                    version_id: version_id.clone(),
+                    success: true,
+                    error: None,
+                },
+            )?;
             Ok(())
-        }
+        },
         Err(e) => {
             error!("Download failed: {}", e);
-            emit_download_complete(&app, DownloadCompleteEvent {
-                version_id: version_id.clone(),
-                success: false,
-                error: Some(e.to_string()),
-            })?;
+            emit_download_complete(
+                &app,
+                DownloadCompleteEvent {
+                    version_id: version_id.clone(),
+                    success: false,
+                    error: Some(e.to_string()),
+                },
+            )?;
             Err(e)
-        }
+        },
     }
 }
 
 #[tauri::command]
 pub async fn versions_is_installed(version_id: String) -> Result<bool> {
     let version_dir = crate::app_dirs::get_version_dir(&version_id)?;
-    Ok(tokio::fs::metadata(version_dir.join(".installed")).await.is_ok())
+    Ok(tokio::fs::metadata(version_dir.join(".installed"))
+        .await
+        .is_ok())
 }
 
 #[tauri::command]
@@ -514,7 +595,10 @@ pub async fn java_resolve(
     required_major: u8,
     override_path: Option<PathBuf>,
 ) -> Result<JavaSelection> {
-    state.java_manager.resolve_java(required_major, override_path.as_ref()).await
+    state
+        .java_manager
+        .resolve_java(required_major, override_path.as_ref())
+        .await
 }
 
 // ==================== INSTANCE COMMANDS ====================
@@ -535,15 +619,18 @@ pub async fn instances_create(
     let instance_clone = instance.clone();
     state.instance_storage.add(instance).await?;
 
-    emit_instance_changed(&app, InstanceChangedEvent {
-        action: InstanceAction::Created,
-        instance: InstanceInfo {
-            id: instance_clone.id.to_string(),
-            name: instance_clone.name.clone(),
-            version_id: instance_clone.version_id.clone(),
-            loader: Some(instance_clone.loader.as_str().to_string()),
+    emit_instance_changed(
+        &app,
+        InstanceChangedEvent {
+            action: InstanceAction::Created,
+            instance: InstanceInfo {
+                id: instance_clone.id.to_string(),
+                name: instance_clone.name.clone(),
+                version_id: instance_clone.version_id.clone(),
+                loader: Some(instance_clone.loader.as_str().to_string()),
+            },
         },
-    })?;
+    )?;
 
     Ok(instance_clone)
 }
@@ -557,15 +644,18 @@ pub async fn instances_update(
     let instance_clone = instance.clone();
     state.instance_storage.update(instance).await?;
 
-    emit_instance_changed(&app, InstanceChangedEvent {
-        action: InstanceAction::Updated,
-        instance: InstanceInfo {
-            id: instance_clone.id.to_string(),
-            name: instance_clone.name.clone(),
-            version_id: instance_clone.version_id.clone(),
-            loader: Some(instance_clone.loader.as_str().to_string()),
+    emit_instance_changed(
+        &app,
+        InstanceChangedEvent {
+            action: InstanceAction::Updated,
+            instance: InstanceInfo {
+                id: instance_clone.id.to_string(),
+                name: instance_clone.name.clone(),
+                version_id: instance_clone.version_id.clone(),
+                loader: Some(instance_clone.loader.as_str().to_string()),
+            },
         },
-    })?;
+    )?;
 
     Ok(instance_clone)
 }
@@ -577,7 +667,10 @@ pub async fn instances_delete(
     id: String,
 ) -> Result<()> {
     let uuid = Uuid::parse_str(&id)?;
-    let instance = state.instance_storage.get(uuid).await
+    let instance = state
+        .instance_storage
+        .get(uuid)
+        .await
         .ok_or(LauncherError::InstanceNotFound(id.clone()))?;
 
     let instance_info = InstanceInfo {
@@ -589,10 +682,10 @@ pub async fn instances_delete(
 
     state.instance_storage.delete(uuid).await?;
 
-    emit_instance_changed(&app, InstanceChangedEvent {
-        action: InstanceAction::Deleted,
-        instance: instance_info,
-    })?;
+    emit_instance_changed(
+        &app,
+        InstanceChangedEvent { action: InstanceAction::Deleted, instance: instance_info },
+    )?;
 
     Ok(())
 }
@@ -607,24 +700,24 @@ pub async fn instances_clone(
     let uuid = Uuid::parse_str(&id)?;
     let cloned = state.instance_storage.clone(uuid, new_name).await?;
 
-    emit_instance_changed(&app, InstanceChangedEvent {
-        action: InstanceAction::Cloned,
-        instance: InstanceInfo {
-            id: cloned.id.to_string(),
-            name: cloned.name.clone(),
-            version_id: cloned.version_id.clone(),
-            loader: Some(cloned.loader.as_str().to_string()),
+    emit_instance_changed(
+        &app,
+        InstanceChangedEvent {
+            action: InstanceAction::Cloned,
+            instance: InstanceInfo {
+                id: cloned.id.to_string(),
+                name: cloned.name.clone(),
+                version_id: cloned.version_id.clone(),
+                loader: Some(cloned.loader.as_str().to_string()),
+            },
         },
-    })?;
+    )?;
 
     Ok(cloned)
 }
 
 #[tauri::command]
-pub async fn instances_open_folder(
-    state: State<'_, Arc<AppState>>,
-    id: String,
-) -> Result<()> {
+pub async fn instances_open_folder(state: State<'_, Arc<AppState>>, id: String) -> Result<()> {
     let uuid = Uuid::parse_str(&id)?;
     state.instance_storage.open_game_dir(uuid).await
 }
@@ -645,10 +738,21 @@ fn loader_library_url(
     }
 
     let (group, artifact, version) = (parts[0], parts[1], parts[2]);
-    let classifier = parts.get(3).map(|value| format!("-{value}")).unwrap_or_default();
+    let classifier = parts
+        .get(3)
+        .map(|value| format!("-{value}"))
+        .unwrap_or_default();
     let file_name = format!("{artifact}-{version}{classifier}.{extension}");
-    let relative_path = format!("{}/{}/{}/{}", group.replace('.', "/"), artifact, version, file_name);
-    let repository = repository.unwrap_or(default_repository).trim_end_matches('/');
+    let relative_path = format!(
+        "{}/{}/{}/{}",
+        group.replace('.', "/"),
+        artifact,
+        version,
+        file_name
+    );
+    let repository = repository
+        .unwrap_or(default_repository)
+        .trim_end_matches('/');
     Some(format!("{repository}/{relative_path}"))
 }
 
@@ -662,9 +766,14 @@ async fn download_loader_libraries(
 ) -> Result<()> {
     let libraries_dir = crate::app_dirs::get_libraries_dir()?;
     for (name, repository) in libraries {
-        let url = loader_library_url(repository.as_deref(), &name, default_repository).ok_or_else(|| {
-            LauncherError::ModLoader(format!("Invalid loader library Maven coordinate: {}", name))
-        })?;
+        let url = loader_library_url(repository.as_deref(), &name, default_repository).ok_or_else(
+            || {
+                LauncherError::ModLoader(format!(
+                    "Invalid loader library Maven coordinate: {}",
+                    name
+                ))
+            },
+        )?;
         let library = Library {
             name: name.clone(),
             downloads: None,
@@ -694,7 +803,10 @@ async fn download_loader_libraries(
 }
 
 /// Merge Fabric installer profile into version JSON
-fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricInstallerProfile) -> VersionJson {
+fn merge_fabric_profile(
+    mut version_json: VersionJson,
+    fabric_profile: FabricInstallerProfile,
+) -> VersionJson {
     if !fabric_profile.main_class.is_empty() {
         version_json.main_class = fabric_profile.main_class;
     }
@@ -730,18 +842,32 @@ fn merge_fabric_profile(mut version_json: VersionJson, fabric_profile: FabricIns
             extract: None,
             url: None,
         };
-        version_json.libraries.retain(|library| library.name != fabric_lib.name);
+        version_json
+            .libraries
+            .retain(|library| library.name != fabric_lib.name);
         version_json.libraries.push(lib);
     }
 
     version_json.arguments.game.extend(
-        fabric_profile.arguments.game.into_iter().map(Argument::Simple),
+        fabric_profile
+            .arguments
+            .game
+            .into_iter()
+            .map(Argument::Simple),
     );
     version_json.arguments.game.extend(
-        fabric_profile.arguments.client.into_iter().map(Argument::Simple),
+        fabric_profile
+            .arguments
+            .client
+            .into_iter()
+            .map(Argument::Simple),
     );
     version_json.arguments.jvm.extend(
-        fabric_profile.arguments.jvm.into_iter().map(Argument::Simple),
+        fabric_profile
+            .arguments
+            .jvm
+            .into_iter()
+            .map(Argument::Simple),
     );
 
     version_json
@@ -779,7 +905,10 @@ mod loader_library_tests {
 }
 
 /// Merge Quilt's launch profile into the inherited Minecraft metadata.
-fn merge_quilt_profile(mut version_json: VersionJson, profile: QuiltInstallerProfile) -> VersionJson {
+fn merge_quilt_profile(
+    mut version_json: VersionJson,
+    profile: QuiltInstallerProfile,
+) -> VersionJson {
     if !profile.main_class.is_empty() {
         version_json.main_class = profile.main_class;
     }
@@ -815,19 +944,24 @@ fn merge_quilt_profile(mut version_json: VersionJson, profile: QuiltInstallerPro
             extract: None,
             url: None,
         };
-        version_json.libraries.retain(|existing| existing.name != quilt_library.name);
+        version_json
+            .libraries
+            .retain(|existing| existing.name != quilt_library.name);
         version_json.libraries.push(library);
     }
 
-    version_json.arguments.game.extend(
-        profile.arguments.game.into_iter().map(Argument::Simple),
-    );
-    version_json.arguments.game.extend(
-        profile.arguments.client.into_iter().map(Argument::Simple),
-    );
-    version_json.arguments.jvm.extend(
-        profile.arguments.jvm.into_iter().map(Argument::Simple),
-    );
+    version_json
+        .arguments
+        .game
+        .extend(profile.arguments.game.into_iter().map(Argument::Simple));
+    version_json
+        .arguments
+        .game
+        .extend(profile.arguments.client.into_iter().map(Argument::Simple));
+    version_json
+        .arguments
+        .jvm
+        .extend(profile.arguments.jvm.into_iter().map(Argument::Simple));
 
     version_json
 }
@@ -844,10 +978,16 @@ pub async fn launch_start(
     let instance_uuid = Uuid::parse_str(&instance_id)?;
     let account_uuid = Uuid::parse_str(&account_id)?;
 
-    let instance = state.instance_storage.get(instance_uuid).await
+    let instance = state
+        .instance_storage
+        .get(instance_uuid)
+        .await
         .ok_or(LauncherError::InstanceNotFound(instance_id))?;
 
-    let account = state.account_storage.get(account_uuid).await
+    let account = state
+        .account_storage
+        .get(account_uuid)
+        .await
         .ok_or(LauncherError::AccountNotFound(account_id))?;
 
     // Resolve and validate the instance working directory before launch.
@@ -863,13 +1003,15 @@ pub async fn launch_start(
     tokio::fs::create_dir_all(&game_dir).await.map_err(|e| {
         LauncherError::Launch(format!(
             "Could not create instance game directory '{}': {}",
-            game_dir.display(), e
+            game_dir.display(),
+            e
         ))
     })?;
     let game_dir = tokio::fs::canonicalize(&game_dir).await.map_err(|e| {
         LauncherError::Launch(format!(
             "Could not resolve instance game directory '{}': {}",
-            game_dir.display(), e
+            game_dir.display(),
+            e
         ))
     })?;
     if !tokio::fs::metadata(&game_dir).await?.is_dir() {
@@ -890,7 +1032,8 @@ pub async fn launch_start(
 
         // If "latest" is specified, fetch the latest stable loader version for this Minecraft version
         let resolved_loader_version = if loader_version == "latest" {
-            let loader_versions = crate::loaders::fabric::fetch_fabric_loader_versions(&state.http_client).await?;
+            let loader_versions =
+                crate::loaders::fabric::fetch_fabric_loader_versions(&state.http_client).await?;
             loader_versions
                 .into_iter()
                 .filter(|v| v.stable)
@@ -906,7 +1049,8 @@ pub async fn launch_start(
             &instance.version_id,
             &resolved_loader_version,
             &version_dir,
-        ).await?;
+        )
+        .await?;
 
         // Download Fabric libraries to the matching Maven paths before classpath creation.
         download_loader_libraries(
@@ -932,13 +1076,14 @@ pub async fn launch_start(
                 &instance.version_id,
             )
             .await?;
-            crate::loaders::quilt::latest_stable_quilt_loader_version(&versions)
-            .ok_or_else(|| {
-                LauncherError::ModLoader(format!(
-                    "No stable Quilt Loader version is available for Minecraft {}",
-                    instance.version_id
-                ))
-            })?
+            crate::loaders::quilt::latest_stable_quilt_loader_version(&versions).ok_or_else(
+                || {
+                    LauncherError::ModLoader(format!(
+                        "No stable Quilt Loader version is available for Minecraft {}",
+                        instance.version_id
+                    ))
+                },
+            )?
         } else {
             configured_version.to_string()
         };
@@ -969,10 +1114,10 @@ pub async fn launch_start(
 
     // Resolve Java - use version's required Java version from version JSON
     let required_java = version_json.java_version.major_version;
-    let java_selection = state.java_manager.resolve_java(
-        required_java,
-        instance.java.path.as_ref(),
-    ).await?;
+    let java_selection = state
+        .java_manager
+        .resolve_java(required_java, instance.java.path.as_ref())
+        .await?;
 
     // Build classpath
     let libraries_dir = crate::app_dirs::get_libraries_dir()?;
@@ -1002,23 +1147,11 @@ pub async fn launch_start(
 
     // Add config default JVM args
     let config = state.config.read().await;
-    jvm_args.extend(
-        config.default_jvm_args
-            .split_whitespace()
-            .map(String::from)
-    );
+    jvm_args.extend(config.default_jvm_args.split_whitespace().map(String::from));
     drop(config);
 
-    jvm_args.extend(
-        instance.java.jvm_args
-            .split_whitespace()
-            .map(String::from)
-    );
-    jvm_args.extend(
-        instance.jvm_args
-            .split_whitespace()
-            .map(String::from)
-    );
+    jvm_args.extend(instance.java.jvm_args.split_whitespace().map(String::from));
+    jvm_args.extend(instance.jvm_args.split_whitespace().map(String::from));
 
     // Memory settings
     jvm_args.push(format!("-Xms{}m", instance.memory.min_mb));
@@ -1029,11 +1162,7 @@ pub async fn launch_start(
 
     // Combine game args
     let mut game_args = launch_args.game_args;
-    game_args.extend(
-        instance.game_args
-            .split_whitespace()
-            .map(String::from)
-    );
+    game_args.extend(instance.game_args.split_whitespace().map(String::from));
 
     // Deduplicate game args to avoid "Only one quick play option can be specified" error
     crate::launch::arguments::deduplicate_game_args(&mut game_args);
@@ -1047,7 +1176,8 @@ pub async fn launch_start(
         launch_args.main_class,
         game_args,
         &game_dir,
-    ).await?;
+    )
+    .await?;
 
     // Store the launch handle for kill functionality
     {
@@ -1056,11 +1186,14 @@ pub async fn launch_start(
     }
 
     // Update last played
-    state.instance_storage.update({
-        let mut inst = instance;
-        inst.touch_last_played();
-        inst
-    }).await?;
+    state
+        .instance_storage
+        .update({
+            let mut inst = instance;
+            inst.touch_last_played();
+            inst
+        })
+        .await?;
 
     Ok(())
 }
@@ -1082,12 +1215,15 @@ pub async fn launch_kill(
         if handle.is_running().await {
             let pid = handle.pid;
             handle.kill().await?;
-            emit_launch_status(&app, LaunchStatusEvent {
-                instance_id,
-                status: LaunchStatus::Killed,
-                exit_code: None,
-                pid,
-            })?;
+            emit_launch_status(
+                &app,
+                LaunchStatusEvent {
+                    instance_id,
+                    status: LaunchStatus::Killed,
+                    exit_code: None,
+                    pid,
+                },
+            )?;
         }
     }
 
@@ -1097,17 +1233,23 @@ pub async fn launch_kill(
 // ==================== LOADER COMMANDS ====================
 
 #[tauri::command]
-pub async fn loaders_fabric_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricVersion>> {
+pub async fn loaders_fabric_versions(
+    state: State<'_, Arc<AppState>>,
+) -> Result<Vec<crate::loaders::fabric::FabricVersion>> {
     fetch_fabric_versions(&state.http_client).await
 }
 
 #[tauri::command]
-pub async fn loaders_fabric_loader_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::fabric::FabricLoaderVersion>> {
+pub async fn loaders_fabric_loader_versions(
+    state: State<'_, Arc<AppState>>,
+) -> Result<Vec<crate::loaders::fabric::FabricLoaderVersion>> {
     fetch_fabric_loader_versions(&state.http_client).await
 }
 
 #[tauri::command]
-pub async fn loaders_quilt_versions(state: State<'_, Arc<AppState>>) -> Result<Vec<crate::loaders::quilt::QuiltVersion>> {
+pub async fn loaders_quilt_versions(
+    state: State<'_, Arc<AppState>>,
+) -> Result<Vec<crate::loaders::quilt::QuiltVersion>> {
     fetch_quilt_versions(&state.http_client).await
 }
 

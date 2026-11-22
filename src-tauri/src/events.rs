@@ -122,12 +122,18 @@ pub struct InstanceInfo {
 }
 
 /// Emit a download progress event
-pub fn emit_download_progress(app: &AppHandle, event: DownloadProgressEvent) -> Result<(), TauriError> {
+pub fn emit_download_progress(
+    app: &AppHandle,
+    event: DownloadProgressEvent,
+) -> Result<(), TauriError> {
     app.emit("download_progress", &event)
 }
 
 /// Emit a download complete event
-pub fn emit_download_complete(app: &AppHandle, event: DownloadCompleteEvent) -> Result<(), TauriError> {
+pub fn emit_download_complete(
+    app: &AppHandle,
+    event: DownloadCompleteEvent,
+) -> Result<(), TauriError> {
     app.emit("download_complete", &event)
 }
 
@@ -147,6 +153,9 @@ pub fn emit_account_changed(app: &AppHandle, event: AccountChangedEvent) -> Resu
 }
 
 /// Emit instance changed
-pub fn emit_instance_changed(app: &AppHandle, event: InstanceChangedEvent) -> Result<(), TauriError> {
+pub fn emit_instance_changed(
+    app: &AppHandle,
+    event: InstanceChangedEvent,
+) -> Result<(), TauriError> {
     app.emit("instances_changed", &event)
 }

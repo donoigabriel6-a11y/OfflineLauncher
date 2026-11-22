@@ -17,18 +17,14 @@ pub struct AccountStorageConfig {
 
 impl Default for AccountStorageConfig {
     fn default() -> Self {
-        Self {
-            accounts_file: get_accounts_file().expect("Failed to get accounts file path"),
-        }
+        Self { accounts_file: get_accounts_file().expect("Failed to get accounts file path") }
     }
 }
 
 impl AccountStorageConfig {
     /// Create a test configuration with a temp directory
     pub fn for_test(temp_dir: PathBuf) -> Self {
-        Self {
-            accounts_file: temp_dir.join("accounts.json"),
-        }
+        Self { accounts_file: temp_dir.join("accounts.json") }
     }
 }
 
@@ -85,9 +81,27 @@ impl StoredAccount {
     /// Convert back to an Account trait object
     pub fn into_account(self) -> Box<dyn Account> {
         match self {
-            StoredAccount::Offline { id, username, uuid, account_type, access_token, user_type, skin_path, created_at, updated_at } => {
-                Box::new(OfflineAccount::from_storage(id, username, uuid, account_type, access_token, user_type, skin_path, created_at, updated_at))
-            }
+            StoredAccount::Offline {
+                id,
+                username,
+                uuid,
+                account_type,
+                access_token,
+                user_type,
+                skin_path,
+                created_at,
+                updated_at,
+            } => Box::new(OfflineAccount::from_storage(
+                id,
+                username,
+                uuid,
+                account_type,
+                access_token,
+                user_type,
+                skin_path,
+                created_at,
+                updated_at,
+            )),
         }
     }
 }
@@ -106,10 +120,7 @@ impl AccountStorage {
 
     /// Create a new storage instance with custom config
     pub fn with_config(config: AccountStorageConfig) -> Self {
-        Self {
-            accounts: Arc::new(RwLock::new(HashMap::new())),
-            config,
-        }
+        Self { accounts: Arc::new(RwLock::new(HashMap::new())), config }
     }
 
     /// Create a test storage instance with a temp directory
@@ -124,11 +135,12 @@ impl AccountStorage {
             return Ok(());
         }
 
-        let content = tokio::fs::read_to_string(&path).await
+        let content = tokio::fs::read_to_string(&path)
+            .await
             .map_err(|e| LauncherError::Io(e))?;
 
-        let stored: Vec<StoredAccount> = serde_json::from_str(&content)
-            .map_err(|e| LauncherError::Serde(e))?;
+        let stored: Vec<StoredAccount> =
+            serde_json::from_str(&content).map_err(|e| LauncherError::Serde(e))?;
 
         let mut accounts = self.accounts.write().await;
         for stored_acc in stored {
@@ -141,7 +153,8 @@ impl AccountStorage {
     /// Save accounts to disk
     pub async fn save(&self) -> Result<()> {
         let accounts = self.accounts.read().await;
-        let stored: Vec<StoredAccount> = accounts.values()
+        let stored: Vec<StoredAccount> = accounts
+            .values()
             .map(|acc| {
                 // Downcast to OfflineAccount for serialization
                 // In the future, we'll handle different account types
@@ -156,14 +169,15 @@ impl AccountStorage {
 
         let path = &self.config.accounts_file;
         if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await
+            tokio::fs::create_dir_all(parent)
+                .await
                 .map_err(|e| LauncherError::Io(e))?;
         }
 
-        let content = serde_json::to_string_pretty(&stored)
-            .map_err(|e| LauncherError::Serde(e))?;
+        let content = serde_json::to_string_pretty(&stored).map_err(|e| LauncherError::Serde(e))?;
 
-        tokio::fs::write(path, content).await
+        tokio::fs::write(path, content)
+            .await
             .map_err(|e| LauncherError::Io(e))?;
         Ok(())
     }
@@ -183,7 +197,8 @@ impl AccountStorage {
     /// Get an account by username (for offline accounts)
     pub async fn get_by_username(&self, username: &str) -> Option<Box<dyn Account>> {
         let accounts = self.accounts.read().await;
-        accounts.values()
+        accounts
+            .values()
             .find(|a| a.username().eq_ignore_ascii_case(username))
             .map(|a| a.clone_box())
     }
@@ -193,7 +208,9 @@ impl AccountStorage {
         let id = account.id();
         let mut accounts = self.accounts.write().await;
         if accounts.contains_key(&id) {
-            return Err(LauncherError::InvalidArgument("Account already exists".into()));
+            return Err(LauncherError::InvalidArgument(
+                "Account already exists".into(),
+            ));
         }
         accounts.insert(id, account);
         drop(accounts);
@@ -232,7 +249,9 @@ impl AccountStorage {
             let account = OfflineAccount::new("Player".into())?;
             let id = account.id();
             self.add(Box::new(account)).await?;
-            self.get(id).await.ok_or(LauncherError::AccountNotFound("default".into()))
+            self.get(id)
+                .await
+                .ok_or(LauncherError::AccountNotFound("default".into()))
         }
     }
 }
@@ -267,8 +286,14 @@ mod tests {
     async fn test_account_storage_list() {
         let temp_dir = tempdir().unwrap();
         let storage = AccountStorage::for_test(temp_dir.path().to_path_buf());
-        storage.add(Box::new(OfflineAccount::new("User1".into()).unwrap())).await.unwrap();
-        storage.add(Box::new(OfflineAccount::new("User2".into()).unwrap())).await.unwrap();
+        storage
+            .add(Box::new(OfflineAccount::new("User1".into()).unwrap()))
+            .await
+            .unwrap();
+        storage
+            .add(Box::new(OfflineAccount::new("User2".into()).unwrap()))
+            .await
+            .unwrap();
 
         let accounts = storage.list().await;
         assert_eq!(accounts.len(), 2);

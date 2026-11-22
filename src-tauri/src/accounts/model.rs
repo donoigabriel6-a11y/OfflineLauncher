@@ -17,9 +17,9 @@ pub enum AccountType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum UserType {
-    Legacy,      // Offline accounts
-    Msa,         // Microsoft accounts
-    Mojang,      // Mojang accounts (legacy)
+    Legacy, // Offline accounts
+    Msa,    // Microsoft accounts
+    Mojang, // Mojang accounts (legacy)
 }
 
 /// Account trait - implemented by different account providers
@@ -199,7 +199,10 @@ pub fn validate_username(username: &str) -> crate::error::Result<()> {
             "Username must be 3-16 characters".into(),
         ));
     }
-    if !username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    if !username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
         return Err(crate::error::LauncherError::InvalidUsername(
             "Username can only contain letters, numbers, and underscores".into(),
         ));
@@ -249,7 +252,10 @@ mod tests {
     fn test_generate_offline_uuid_different() {
         let uuid1 = generate_offline_uuid("Steve");
         let uuid2 = generate_offline_uuid("Alex");
-        assert_ne!(uuid1, uuid2, "Different usernames must produce different UUIDs");
+        assert_ne!(
+            uuid1, uuid2,
+            "Different usernames must produce different UUIDs"
+        );
     }
 
     #[test]
@@ -318,7 +324,10 @@ mod tests {
         // UUID generation should be case-sensitive (different usernames = different UUIDs)
         let uuid1 = generate_offline_uuid("Steve");
         let uuid2 = generate_offline_uuid("steve");
-        assert_ne!(uuid1, uuid2, "Case difference should produce different UUIDs");
+        assert_ne!(
+            uuid1, uuid2,
+            "Case difference should produce different UUIDs"
+        );
     }
 
     #[test]
@@ -326,10 +335,16 @@ mod tests {
         // Test with underscores and numbers
         let uuid1 = generate_offline_uuid("Player_123");
         let uuid2 = generate_offline_uuid("Player_123");
-        assert_eq!(uuid1, uuid2, "Same username with special chars should produce same UUID");
+        assert_eq!(
+            uuid1, uuid2,
+            "Same username with special chars should produce same UUID"
+        );
 
         let uuid3 = generate_offline_uuid("Test_User");
         let uuid4 = generate_offline_uuid("Test-User"); // Different username (hyphen not allowed in MC)
-        assert_ne!(uuid3, uuid4, "Different usernames should produce different UUIDs");
+        assert_ne!(
+            uuid3, uuid4,
+            "Different usernames should produce different UUIDs"
+        );
     }
 }

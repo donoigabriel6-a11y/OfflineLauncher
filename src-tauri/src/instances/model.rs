@@ -44,15 +44,16 @@ pub struct MemorySettings {
     pub max_mb: u32,
 }
 
-fn default_min_memory() -> u32 { 512 }
-fn default_max_memory() -> u32 { 2048 }
+fn default_min_memory() -> u32 {
+    512
+}
+fn default_max_memory() -> u32 {
+    2048
+}
 
 impl Default for MemorySettings {
     fn default() -> Self {
-        Self {
-            min_mb: default_min_memory(),
-            max_mb: default_max_memory(),
-        }
+        Self { min_mb: default_min_memory(), max_mb: default_max_memory() }
     }
 }
 
@@ -70,11 +71,7 @@ pub struct JavaSettings {
 
 impl Default for JavaSettings {
     fn default() -> Self {
-        Self {
-            path: None,
-            major_version: None,
-            jvm_args: String::new(),
-        }
+        Self { path: None, major_version: None, jvm_args: String::new() }
     }
 }
 

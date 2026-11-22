@@ -1,7 +1,7 @@
+use crate::app_dirs::{get_app_config_dir, get_app_data_dir};
+use crate::error::{LauncherError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::app_dirs::{get_app_data_dir, get_app_config_dir};
-use crate::error::{LauncherError, Result};
 
 /// Application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,13 +71,27 @@ pub struct WindowConfig {
     pub maximized: bool,
 }
 
-fn default_concurrent_downloads() -> usize { 8 }
-fn default_memory() -> u32 { 2048 }
-fn default_jvm_args() -> String { "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1".into() }
-fn default_language() -> String { "en".into() }
-fn default_theme() -> String { "dark".into() }
-fn default_window_width() -> u32 { 1200 }
-fn default_window_height() -> u32 { 800 }
+fn default_concurrent_downloads() -> usize {
+    8
+}
+fn default_memory() -> u32 {
+    2048
+}
+fn default_jvm_args() -> String {
+    "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1".into()
+}
+fn default_language() -> String {
+    "en".into()
+}
+fn default_theme() -> String {
+    "dark".into()
+}
+fn default_window_width() -> u32 {
+    1200
+}
+fn default_window_height() -> u32 {
+    800
+}
 
 impl Default for Config {
     fn default() -> Self {
@@ -101,11 +115,7 @@ impl Default for Config {
 
 impl Default for WindowConfig {
     fn default() -> Self {
-        Self {
-            width: default_window_width(),
-            height: default_window_height(),
-            maximized: false,
-        }
+        Self { width: default_window_width(), height: default_window_height(), maximized: false }
     }
 }
 
@@ -124,10 +134,9 @@ impl Config {
             return Ok(config);
         }
 
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| LauncherError::Io(e))?;
-        let config: Self = toml::from_str(&content)
-            .map_err(|e| LauncherError::Config(e.to_string()))?;
+        let content = std::fs::read_to_string(&path).map_err(|e| LauncherError::Io(e))?;
+        let config: Self =
+            toml::from_str(&content).map_err(|e| LauncherError::Config(e.to_string()))?;
         Ok(config)
     }
 
@@ -135,13 +144,11 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         let path = Self::config_path()?;
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| LauncherError::Io(e))?;
+            std::fs::create_dir_all(parent).map_err(|e| LauncherError::Io(e))?;
         }
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| LauncherError::Config(e.to_string()))?;
-        std::fs::write(&path, content)
-            .map_err(|e| LauncherError::Io(e))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| LauncherError::Config(e.to_string()))?;
+        std::fs::write(&path, content).map_err(|e| LauncherError::Io(e))?;
         Ok(())
     }
 

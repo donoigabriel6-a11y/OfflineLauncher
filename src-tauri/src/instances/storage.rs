@@ -18,18 +18,14 @@ pub struct InstanceStorageConfig {
 
 impl Default for InstanceStorageConfig {
     fn default() -> Self {
-        Self {
-            instances_dir: get_instances_dir().expect("Failed to get instances directory"),
-        }
+        Self { instances_dir: get_instances_dir().expect("Failed to get instances directory") }
     }
 }
 
 impl InstanceStorageConfig {
     /// Create a test configuration with a temp directory
     pub fn for_test(temp_dir: PathBuf) -> Self {
-        Self {
-            instances_dir: temp_dir.join("instances"),
-        }
+        Self { instances_dir: temp_dir.join("instances") }
     }
 }
 
@@ -44,10 +40,7 @@ impl InstanceStorage {
     }
 
     pub fn with_config(config: InstanceStorageConfig) -> Self {
-        Self {
-            instances: Arc::new(RwLock::new(HashMap::new())),
-            config,
-        }
+        Self { instances: Arc::new(RwLock::new(HashMap::new())), config }
     }
 
     pub fn for_test(temp_dir: PathBuf) -> Self {
@@ -114,7 +107,9 @@ impl InstanceStorage {
         let id = instance.id;
         let mut instances = self.instances.write().await;
         if instances.contains_key(&id) {
-            return Err(LauncherError::InvalidArgument("Instance already exists".into()));
+            return Err(LauncherError::InvalidArgument(
+                "Instance already exists".into(),
+            ));
         }
         instances.insert(id, instance);
         drop(instances);
@@ -152,7 +147,9 @@ impl InstanceStorage {
 
     /// Clone an instance
     pub async fn clone(&self, id: Uuid, new_name: String) -> Result<Instance> {
-        let original = self.get(id).await
+        let original = self
+            .get(id)
+            .await
             .ok_or(LauncherError::InstanceNotFound(id.to_string()))?;
 
         let mut cloned = Instance::new(new_name, original.version_id.clone())?;
@@ -170,7 +167,9 @@ impl InstanceStorage {
 
     /// Open instance game directory in file explorer
     pub async fn open_game_dir(&self, id: Uuid) -> Result<()> {
-        let instance = self.get(id).await
+        let instance = self
+            .get(id)
+            .await
             .ok_or(LauncherError::InstanceNotFound(id.to_string()))?;
 
         let game_dir = instance.effective_game_dir();
@@ -187,9 +186,7 @@ impl InstanceStorage {
         }
         #[cfg(target_os = "macos")]
         {
-            std::process::Command::new("open")
-                .arg(&game_dir)
-                .spawn()?;
+            std::process::Command::new("open").arg(&game_dir).spawn()?;
         }
         #[cfg(target_os = "linux")]
         {

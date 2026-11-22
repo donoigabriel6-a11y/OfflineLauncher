@@ -72,24 +72,31 @@ pub struct FabricArguments {
 /// Fetch available Fabric game versions
 pub async fn fetch_fabric_versions(client: &Client) -> Result<Vec<FabricVersion>> {
     let url = format!("{}/versions/game", FABRIC_META_URL);
-    let response = client.get(&url).send().await
+    let response = client
+        .get(&url)
+        .send()
+        .await
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric versions: {} - {}", status, text)));
+        return Err(LauncherError::ModLoader(format!(
+            "Failed to fetch Fabric versions: {} - {}",
+            status, text
+        )));
     }
 
     // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
+    let text = response.text().await.map_err(|e| LauncherError::Http(e))?;
 
     // Parse the JSON from the text
-    let versions: Vec<FabricVersion> = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Fabric versions JSON: {} - Response: {}", e, text)
-        ))?;
+    let versions: Vec<FabricVersion> = serde_json::from_str(&text).map_err(|e| {
+        LauncherError::ModLoader(format!(
+            "Failed to parse Fabric versions JSON: {} - Response: {}",
+            e, text
+        ))
+    })?;
 
     Ok(versions)
 }
@@ -97,24 +104,31 @@ pub async fn fetch_fabric_versions(client: &Client) -> Result<Vec<FabricVersion>
 /// Fetch available Fabric loader versions
 pub async fn fetch_fabric_loader_versions(client: &Client) -> Result<Vec<FabricLoaderVersion>> {
     let url = format!("{}/versions/loader", FABRIC_META_URL);
-    let response = client.get(&url).send().await
+    let response = client
+        .get(&url)
+        .send()
+        .await
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(format!("Failed to fetch Fabric loader versions: {} - {}", status, text)));
+        return Err(LauncherError::ModLoader(format!(
+            "Failed to fetch Fabric loader versions: {} - {}",
+            status, text
+        )));
     }
 
     // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
+    let text = response.text().await.map_err(|e| LauncherError::Http(e))?;
 
     // Parse the JSON from the text
-    let versions: Vec<FabricLoaderVersion> = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Fabric loader versions JSON: {} - Response: {}", e, text)
-        ))?;
+    let versions: Vec<FabricLoaderVersion> = serde_json::from_str(&text).map_err(|e| {
+        LauncherError::ModLoader(format!(
+            "Failed to parse Fabric loader versions JSON: {} - Response: {}",
+            e, text
+        ))
+    })?;
 
     Ok(versions)
 }
@@ -131,26 +145,31 @@ pub async fn install_fabric(
         FABRIC_META_URL, minecraft_version, loader_version
     );
 
-    let response = client.get(&url).send().await
+    let response = client
+        .get(&url)
+        .send()
+        .await
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
-        return Err(LauncherError::ModLoader(
-            format!("Failed to get Fabric installer profile: {} - {}", status, text)
-        ));
+        return Err(LauncherError::ModLoader(format!(
+            "Failed to get Fabric installer profile: {} - {}",
+            status, text
+        )));
     }
 
     // Get the raw text first to debug JSON parsing issues
-    let text = response.text().await
-        .map_err(|e| LauncherError::Http(e))?;
+    let text = response.text().await.map_err(|e| LauncherError::Http(e))?;
 
     // Parse the JSON from the text
-    let profile: FabricInstallerProfile = serde_json::from_str(&text)
-        .map_err(|e| LauncherError::ModLoader(
-            format!("Failed to parse Fabric installer profile JSON: {} - Response: {}", e, text)
-        ))?;
+    let profile: FabricInstallerProfile = serde_json::from_str(&text).map_err(|e| {
+        LauncherError::ModLoader(format!(
+            "Failed to parse Fabric installer profile JSON: {} - Response: {}",
+            e, text
+        ))
+    })?;
 
     if profile.id.is_empty() || profile.main_class.is_empty() || profile.libraries.is_empty() {
         return Err(LauncherError::ModLoader(format!(
@@ -168,7 +187,8 @@ mod tests {
 
     #[test]
     fn test_deserializes_top_level_fabric_profile_response() {
-        let profile: FabricInstallerProfile = serde_json::from_str(r#"{
+        let profile: FabricInstallerProfile = serde_json::from_str(
+            r#"{
             "id": "fabric-loader-1.21.4-0.16.10",
             "inheritsFrom": "1.21.4",
             "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
@@ -179,9 +199,14 @@ mod tests {
                 "size": 100,
                 "sha1": "abc"
             }]
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
-        assert_eq!(profile.main_class, "net.fabricmc.loader.impl.launch.knot.KnotClient");
+        assert_eq!(
+            profile.main_class,
+            "net.fabricmc.loader.impl.launch.knot.KnotClient"
+        );
         assert_eq!(profile.arguments.jvm, vec!["-Dfabric.example=true"]);
         assert_eq!(profile.libraries.len(), 1);
         assert!(profile.java_version.is_none());

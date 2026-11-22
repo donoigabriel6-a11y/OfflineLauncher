@@ -1,10 +1,10 @@
 // Integration test: download and prepare a small version without launching
 use offline_launcher_lib::{
-    versions::{fetch_version_manifest, VersionType},
-    downloads::{DownloadManager, DownloadOptions, DownloadTask, DownloadStage},
-    app_dirs::{get_version_dir, get_versions_dir, get_libraries_dir, ensure_dirs},
-    versions::inheritance::load_version_json,
+    app_dirs::{ensure_dirs, get_libraries_dir, get_version_dir, get_versions_dir},
+    downloads::{DownloadManager, DownloadOptions, DownloadStage, DownloadTask},
     launch::classpath::build_classpath,
+    versions::inheritance::load_version_json,
+    versions::{fetch_version_manifest, VersionType},
 };
 
 #[tokio::test]
@@ -20,10 +20,18 @@ async fn test_download_version_manifest() {
 
 #[tokio::test]
 async fn test_filter_versions() {
-    let manifest = fetch_version_manifest(&reqwest::Client::new()).await.unwrap();
+    let manifest = fetch_version_manifest(&reqwest::Client::new())
+        .await
+        .unwrap();
 
-    let releases = offline_launcher_lib::versions::manifest::filter_versions(&manifest.versions, Some(VersionType::Release));
-    let snapshots = offline_launcher_lib::versions::manifest::filter_versions(&manifest.versions, Some(VersionType::Snapshot));
+    let releases = offline_launcher_lib::versions::manifest::filter_versions(
+        &manifest.versions,
+        Some(VersionType::Release),
+    );
+    let snapshots = offline_launcher_lib::versions::manifest::filter_versions(
+        &manifest.versions,
+        Some(VersionType::Snapshot),
+    );
 
     assert!(!releases.is_empty());
     assert!(!snapshots.is_empty());
@@ -79,16 +87,23 @@ async fn test_full_version_preparation() {
     let manifest = fetch_version_manifest(&client).await.unwrap();
 
     // Find 1.20.1
-    let version_entry = manifest.versions.iter()
+    let version_entry = manifest
+        .versions
+        .iter()
         .find(|v| v.id == "1.20.1")
         .expect("1.20.1 not found in manifest");
 
     assert_eq!(version_entry.type_, VersionType::Release);
 
     // Download version JSON
-    let version_json: offline_launcher_lib::versions::model::VersionJson = client.get(&version_entry.url)
-        .send().await.unwrap()
-        .json().await.unwrap();
+    let version_json: offline_launcher_lib::versions::model::VersionJson = client
+        .get(&version_entry.url)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
 
     assert_eq!(version_json.id, "1.20.1");
     assert_eq!(version_json.java_version.major_version, 21);

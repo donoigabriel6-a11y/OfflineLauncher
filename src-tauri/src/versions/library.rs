@@ -1,7 +1,7 @@
 //! Library rules evaluation for OS/arch filtering
 
-use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOsName};
 use crate::error::Result;
+use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOsName};
 
 /// Evaluate library rules for the current platform
 /// For libraries: default_allow = true (libraries allowed unless explicitly disallowed)
@@ -186,7 +186,9 @@ pub fn get_native_classifier() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
+    use crate::versions::model::{
+        LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName,
+    };
 
     #[test]
     fn test_empty_rules_allow() {
@@ -195,21 +197,15 @@ mod tests {
 
     #[test]
     fn test_allow_rule() {
-        let rules = vec![LibraryRule {
-            action: LibraryRuleAction::Allow,
-            os: None,
-            features: None,
-        }];
+        let rules =
+            vec![LibraryRule { action: LibraryRuleAction::Allow, os: None, features: None }];
         assert!(evaluate_library_rules(&rules, true).unwrap());
     }
 
     #[test]
     fn test_disallow_rule() {
-        let rules = vec![LibraryRule {
-            action: LibraryRuleAction::Disallow,
-            os: None,
-            features: None,
-        }];
+        let rules =
+            vec![LibraryRule { action: LibraryRuleAction::Disallow, os: None, features: None }];
         assert!(!evaluate_library_rules(&rules, true).unwrap());
     }
 
@@ -218,11 +214,7 @@ mod tests {
         let current = current_os_name();
         let rules = vec![LibraryRule {
             action: LibraryRuleAction::Allow,
-            os: Some(LibraryRuleOs {
-                name: current,
-                version: None,
-                arch: None,
-            }),
+            os: Some(LibraryRuleOs { name: current, version: None, arch: None }),
             features: None,
         }];
         assert!(evaluate_library_rules(&rules, true).unwrap());
@@ -237,11 +229,7 @@ mod tests {
         };
         let rules = vec![LibraryRule {
             action: LibraryRuleAction::Disallow,
-            os: Some(LibraryRuleOs {
-                name: other,
-                version: None,
-                arch: None,
-            }),
+            os: Some(LibraryRuleOs { name: other, version: None, arch: None }),
             features: None,
         }];
         // Should be allowed since rule doesn't apply to current OS

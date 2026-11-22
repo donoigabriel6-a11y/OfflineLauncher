@@ -2,7 +2,7 @@
 
 use crate::accounts::model::Account;
 use crate::error::{LauncherError, Result};
-use crate::versions::model::{VersionJson, Argument, ArgumentValue};
+use crate::versions::model::{Argument, ArgumentValue, VersionJson};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -46,11 +46,7 @@ impl LaunchArguments {
             parse_legacy_arguments(version.minecraft_arguments.as_deref(), &placeholders)?
         };
 
-        Ok(Self {
-            jvm_args,
-            game_args,
-            main_class: version.main_class.clone(),
-        })
+        Ok(Self { jvm_args, game_args, main_class: version.main_class.clone() })
     }
 }
 
@@ -69,23 +65,57 @@ fn build_placeholders(
 ) -> HashMap<String, String> {
     let mut map = HashMap::new();
 
-    map.insert("auth_player_name".to_string(), account.username().to_string());
-    map.insert("auth_uuid".to_string(), account.uuid().to_string().replace('-', ""));
-    map.insert("auth_access_token".to_string(), account.access_token().to_string());
-    map.insert("user_type".to_string(), format!("{:?}", account.user_type()).to_lowercase());
+    map.insert(
+        "auth_player_name".to_string(),
+        account.username().to_string(),
+    );
+    map.insert(
+        "auth_uuid".to_string(),
+        account.uuid().to_string().replace('-', ""),
+    );
+    map.insert(
+        "auth_access_token".to_string(),
+        account.access_token().to_string(),
+    );
+    map.insert(
+        "user_type".to_string(),
+        format!("{:?}", account.user_type()).to_lowercase(),
+    );
     map.insert("version_name".to_string(), version_name.to_string());
-    map.insert("game_directory".to_string(), game_dir.to_string_lossy().to_string());
-    map.insert("assets_root".to_string(), assets_dir.to_string_lossy().to_string());
-    map.insert("library_directory".to_string(), libraries_dir.to_string_lossy().to_string());
-    map.insert("classpath_separator".to_string(), if cfg!(target_os = "windows") { ";".to_string() } else { ":".to_string() });
+    map.insert(
+        "game_directory".to_string(),
+        game_dir.to_string_lossy().to_string(),
+    );
+    map.insert(
+        "assets_root".to_string(),
+        assets_dir.to_string_lossy().to_string(),
+    );
+    map.insert(
+        "library_directory".to_string(),
+        libraries_dir.to_string_lossy().to_string(),
+    );
+    map.insert(
+        "classpath_separator".to_string(),
+        if cfg!(target_os = "windows") {
+            ";".to_string()
+        } else {
+            ":".to_string()
+        },
+    );
     map.insert("assets_index_name".to_string(), assets_index.to_string());
-    map.insert("natives_directory".to_string(), natives_dir.to_string_lossy().to_string());
+    map.insert(
+        "natives_directory".to_string(),
+        natives_dir.to_string_lossy().to_string(),
+    );
     map.insert("classpath".to_string(), classpath.to_string());
     map.insert("launcher_name".to_string(), launcher_name.to_string());
     map.insert("launcher_version".to_string(), launcher_version.to_string());
 
     // Additional placeholders used in newer versions
-    map.insert("auth_session".to_string(), account.access_token().to_string());
+    map.insert(
+        "auth_session".to_string(),
+        account.access_token().to_string(),
+    );
     map.insert("clientid".to_string(), "0".to_string());
     map.insert("auth_xuid".to_string(), "0".to_string());
     map.insert("user_properties".to_string(), "{}".to_string()); // Empty JSON for offline
@@ -142,7 +172,7 @@ fn parse_argument_list(
             Argument::Simple(s) => {
                 // Each modern manifest entry is already one process argument.
                 result.push(substitute_placeholders(s, placeholders));
-            }
+            },
             Argument::Conditional(cond) => {
                 // Evaluate rules
                 // An omitted rules array means the argument is unconditional.
@@ -150,13 +180,17 @@ fn parse_argument_list(
                     match &cond.value {
                         ArgumentValue::Single(s) => {
                             result.push(substitute_placeholders(s, placeholders));
-                        }
+                        },
                         ArgumentValue::Multiple(values) => {
-                            result.extend(values.iter().map(|value| substitute_placeholders(value, placeholders)));
-                        }
+                            result.extend(
+                                values
+                                    .iter()
+                                    .map(|value| substitute_placeholders(value, placeholders)),
+                            );
+                        },
                     }
                 }
-            }
+            },
         }
     }
 
@@ -190,11 +224,13 @@ fn evaluate_argument_rules(rules: &[serde_json::Value]) -> Result<bool> {
         let os_matches = match rule.get("os") {
             None | Some(serde_json::Value::Null) => true,
             Some(os) => {
-                let name_matches = os.get("name")
+                let name_matches = os
+                    .get("name")
                     .and_then(serde_json::Value::as_str)
                     .map(|name| name == current_os)
                     .unwrap_or(true);
-                let arch_matches = os.get("arch")
+                let arch_matches = os
+                    .get("arch")
                     .and_then(serde_json::Value::as_str)
                     .map(|arch| {
                         let normalized = match arch {
@@ -213,14 +249,14 @@ fn evaluate_argument_rules(rules: &[serde_json::Value]) -> Result<bool> {
                     })
                     .unwrap_or(true);
                 name_matches && arch_matches
-            }
+            },
         };
 
         if os_matches {
             match action {
                 "allow" => allowed = true,
                 "disallow" => allowed = false,
-                _ => {}
+                _ => {},
             }
         }
     }
@@ -308,7 +344,7 @@ pub fn deduplicate_game_args(args: &mut Vec<String>) {
             if arg == *qp {
                 // Check if next argument is an empty string (placeholder was substituted with "")
                 if args[i + 1].is_empty() {
-                    indices_to_remove.push(i);     // flag index
+                    indices_to_remove.push(i); // flag index
                     indices_to_remove.push(i + 1); // value index
                 }
             }
@@ -373,7 +409,10 @@ mod tests {
     #[test]
     fn test_modern_arguments_keep_paths_with_spaces_as_single_values() {
         let mut placeholders = HashMap::new();
-        placeholders.insert("game_directory".to_string(), "C:/Users/Test User/.minecraft".to_string());
+        placeholders.insert(
+            "game_directory".to_string(),
+            "C:/Users/Test User/.minecraft".to_string(),
+        );
         let arguments = crate::versions::model::Arguments {
             game: vec![
                 Argument::Simple("--gameDir".to_string()),
@@ -384,7 +423,13 @@ mod tests {
         };
 
         let (_, game_args) = parse_modern_arguments(&arguments, &placeholders).unwrap();
-        assert_eq!(game_args, vec!["--gameDir".to_string(), "C:/Users/Test User/.minecraft".to_string()]);
+        assert_eq!(
+            game_args,
+            vec![
+                "--gameDir".to_string(),
+                "C:/Users/Test User/.minecraft".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -407,14 +452,26 @@ mod tests {
     #[test]
     fn test_legacy_arguments_keep_paths_with_spaces_as_single_values() {
         let mut placeholders = HashMap::new();
-        placeholders.insert("game_directory".to_string(), "C:/Users/Test User/.minecraft".to_string());
+        placeholders.insert(
+            "game_directory".to_string(),
+            "C:/Users/Test User/.minecraft".to_string(),
+        );
 
         let (_, game_args) = parse_legacy_arguments(
             Some("--gameDir ${game_directory} --username Steve"),
             &placeholders,
-        ).unwrap();
+        )
+        .unwrap();
 
-        assert_eq!(game_args, vec!["--gameDir".to_string(), "C:/Users/Test User/.minecraft".to_string(), "--username".to_string(), "Steve".to_string()]);
+        assert_eq!(
+            game_args,
+            vec![
+                "--gameDir".to_string(),
+                "C:/Users/Test User/.minecraft".to_string(),
+                "--username".to_string(),
+                "Steve".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -453,7 +510,14 @@ mod tests {
         ];
         deduplicate_gc_flags(&mut args);
         // Should keep ONLY the last GC flag (UseZGC) and remove all others
-        assert_eq!(args, vec!["-Xms512m".to_string(), "-XX:+UseZGC".to_string(), "-Xmx2G".to_string()]);
+        assert_eq!(
+            args,
+            vec![
+                "-Xms512m".to_string(),
+                "-XX:+UseZGC".to_string(),
+                "-Xmx2G".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -478,15 +542,19 @@ mod tests {
         ];
         deduplicate_gc_flags(&mut args);
         // Should remain unchanged (only one GC flag)
-        assert_eq!(args, vec!["-XX:+UseG1GC".to_string(), "-Xms512m".to_string(), "-Xmx2G".to_string()]);
+        assert_eq!(
+            args,
+            vec![
+                "-XX:+UseG1GC".to_string(),
+                "-Xms512m".to_string(),
+                "-Xmx2G".to_string()
+            ]
+        );
     }
 
     #[test]
     fn test_deduplicate_gc_flags_no_gc_flags() {
-        let mut args = vec![
-            "-Xms512m".to_string(),
-            "-Xmx2G".to_string(),
-        ];
+        let mut args = vec!["-Xms512m".to_string(), "-Xmx2G".to_string()];
         deduplicate_gc_flags(&mut args);
         // Should remain unchanged
         assert_eq!(args, vec!["-Xms512m".to_string(), "-Xmx2G".to_string()]);
@@ -503,7 +571,15 @@ mod tests {
         ];
         deduplicate_game_args(&mut args);
         // Should keep only the last quick play option (--quickPlayPath)
-        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--quickPlayPath".to_string(), "/some/path".to_string()]);
+        assert_eq!(
+            args,
+            vec![
+                "--username".to_string(),
+                "Steve".to_string(),
+                "--quickPlayPath".to_string(),
+                "/some/path".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -527,7 +603,14 @@ mod tests {
         ];
         deduplicate_game_args(&mut args);
         // Should remain unchanged
-        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--quickPlaySingleplayer".to_string()]);
+        assert_eq!(
+            args,
+            vec![
+                "--username".to_string(),
+                "Steve".to_string(),
+                "--quickPlaySingleplayer".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -540,6 +623,14 @@ mod tests {
         ];
         deduplicate_game_args(&mut args);
         // Should remain unchanged
-        assert_eq!(args, vec!["--username".to_string(), "Steve".to_string(), "--gameDir".to_string(), "/path".to_string()]);
+        assert_eq!(
+            args,
+            vec![
+                "--username".to_string(),
+                "Steve".to_string(),
+                "--gameDir".to_string(),
+                "/path".to_string()
+            ]
+        );
     }
 }

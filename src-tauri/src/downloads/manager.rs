@@ -1,19 +1,19 @@
 //! Download manager with concurrency control, retry, and progress reporting
 
-use crate::downloads::progress::DownloadProgress;
-use crate::events::DownloadStage;
 use crate::downloads::hash::verify_sha1_or_error;
+use crate::downloads::progress::DownloadProgress;
 use crate::error::{LauncherError, Result};
 use crate::events::emit_download_progress;
+use crate::events::DownloadStage;
 use reqwest::Client;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
+use tauri::AppHandle;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
 use tokio::time::Duration;
-use tauri::AppHandle;
 
 #[derive(Debug, Clone)]
 pub struct DownloadOptions {
@@ -59,11 +59,7 @@ impl DownloadManager {
             .build()
             .expect("Failed to create HTTP client");
 
-        Self {
-            client,
-            semaphore: Arc::new(Semaphore::new(options.max_concurrent)),
-            options,
-        }
+        Self { client, semaphore: Arc::new(Semaphore::new(options.max_concurrent)), options }
     }
 
     /// Get the download options
@@ -77,12 +73,16 @@ impl DownloadManager {
         task: DownloadTask,
         app: Option<&AppHandle>,
     ) -> Result<PathBuf> {
-        let _permit = self.semaphore.acquire().await
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
             .map_err(|_| LauncherError::Download("Semaphore closed".into()))?;
 
         // Ensure parent directory exists
         if let Some(parent) = task.destination.parent() {
-            tokio::fs::create_dir_all(parent).await
+            tokio::fs::create_dir_all(parent)
+                .await
                 .map_err(|e| LauncherError::Io(e))?;
         }
 
@@ -97,19 +97,20 @@ impl DownloadManager {
                 Ok(path) => return Ok(path),
                 Err(e) => {
                     last_error = Some(e);
-                    tracing::warn!("Download attempt {} failed for {}: {:?}", attempt + 1, task.file_name, last_error);
-                }
+                    tracing::warn!(
+                        "Download attempt {} failed for {}: {:?}",
+                        attempt + 1,
+                        task.file_name,
+                        last_error
+                    );
+                },
             }
         }
 
         Err(last_error.unwrap_or_else(|| LauncherError::Download("Max retries exceeded".into())))
     }
 
-    async fn download_once(
-        &self,
-        task: &DownloadTask,
-        app: Option<&AppHandle>,
-    ) -> Result<PathBuf> {
+    async fn download_once(&self, task: &DownloadTask, app: Option<&AppHandle>) -> Result<PathBuf> {
         // Check if file already exists and is valid
         if task.destination.exists() {
             if let Some(expected) = &task.expected_sha1 {
@@ -117,13 +118,19 @@ impl DownloadManager {
                     match verify_sha1_or_error(&task.destination, expected, &task.file_name).await {
                         Ok(_) => {
                             // File exists and is valid
-                            self.emit_progress(app, task, tokio::fs::metadata(&task.destination).await?.len(), tokio::fs::metadata(&task.destination).await?.len()).await;
+                            self.emit_progress(
+                                app,
+                                task,
+                                tokio::fs::metadata(&task.destination).await?.len(),
+                                tokio::fs::metadata(&task.destination).await?.len(),
+                            )
+                            .await;
                             return Ok(task.destination.clone());
-                        }
+                        },
                         Err(_) => {
                             // Hash mismatch, remove and re-download
                             tokio::fs::remove_file(&task.destination).await.ok();
-                        }
+                        },
                     }
                 }
             } else {
@@ -140,14 +147,15 @@ impl DownloadManager {
             resume_from = tokio::fs::metadata(&temp_path).await?.len();
         }
 
-        let mut request = self.client.get(&task.url)
+        let mut request = self
+            .client
+            .get(&task.url)
             .header(reqwest::header::ACCEPT_ENCODING, "identity");
         if resume_from > 0 {
             request = request.header("Range", format!("bytes={}-", resume_from));
         }
 
-        let response = request.send().await
-            .map_err(|e| LauncherError::Http(e))?;
+        let response = request.send().await.map_err(|e| LauncherError::Http(e))?;
 
         if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && resume_from > 0 {
             tokio::fs::remove_file(&temp_path).await.ok();
@@ -157,23 +165,30 @@ impl DownloadManager {
             )));
         }
 
-        if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
-            return Err(LauncherError::Download(
-                format!("HTTP {}: {}", response.status(), task.url)
-            ));
+        if !response.status().is_success()
+            && response.status() != reqwest::StatusCode::PARTIAL_CONTENT
+        {
+            return Err(LauncherError::Download(format!(
+                "HTTP {}: {}",
+                response.status(),
+                task.url
+            )));
         }
 
         // Resume only when the server honored the Range request. Some servers
         // ignore Range and return 200 with the entire file; appending that body
         // would corrupt the partial download.
-        let resumed = resume_from > 0
-            && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+        let resumed = resume_from > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
         if !resumed {
             resume_from = 0;
         }
 
         let total_size = response.content_length().unwrap_or(0);
-        let total = if resumed { total_size + resume_from } else { total_size };
+        let total = if resumed {
+            total_size + resume_from
+        } else {
+            total_size
+        };
 
         let mut options = OpenOptions::new();
         options.create(true).write(true);
@@ -182,7 +197,9 @@ impl DownloadManager {
         } else {
             options.truncate(true);
         }
-        let mut file = options.open(&temp_path).await
+        let mut file = options
+            .open(&temp_path)
+            .await
             .map_err(|e| LauncherError::Io(e))?;
 
         let mut downloaded = resume_from;
@@ -192,7 +209,8 @@ impl DownloadManager {
         use futures::StreamExt;
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| LauncherError::Http(e))?;
-            file.write_all(&chunk).await
+            file.write_all(&chunk)
+                .await
                 .map_err(|e| LauncherError::Io(e))?;
             downloaded += chunk.len() as u64;
 
@@ -208,7 +226,9 @@ impl DownloadManager {
         // Verify hash if provided
         if let Some(expected) = &task.expected_sha1 {
             if self.options.verify_hash {
-                if let Err(error) = verify_sha1_or_error(&temp_path, expected, &task.file_name).await {
+                if let Err(error) =
+                    verify_sha1_or_error(&temp_path, expected, &task.file_name).await
+                {
                     // Never resume a completed but corrupt file on the next retry.
                     tokio::fs::remove_file(&temp_path).await.ok();
                     return Err(error);
@@ -217,7 +237,8 @@ impl DownloadManager {
         }
 
         // Move temp file to final destination
-        tokio::fs::rename(&temp_path, &task.destination).await
+        tokio::fs::rename(&temp_path, &task.destination)
+            .await
             .map_err(|e| LauncherError::Io(e))?;
 
         // Final progress
@@ -240,13 +261,16 @@ impl DownloadManager {
                 task.stage.clone(),
             );
             progress.update(downloaded, total);
-            let _ = emit_download_progress(app, crate::events::DownloadProgressEvent {
-                version_id: progress.version_id,
-                file_name: progress.file_name,
-                downloaded: progress.downloaded,
-                total: progress.total,
-                stage: progress.stage,
-            });
+            let _ = emit_download_progress(
+                app,
+                crate::events::DownloadProgressEvent {
+                    version_id: progress.version_id,
+                    file_name: progress.file_name,
+                    downloaded: progress.downloaded,
+                    total: progress.total,
+                    stage: progress.stage,
+                },
+            );
         }
     }
 
