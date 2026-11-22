@@ -29,7 +29,9 @@ pub async fn detect_system_java() -> Result<Vec<JavaInstallation>> {
 
     // Check JAVA_HOME
     if let Ok(java_home) = std::env::var("JAVA_HOME") {
-        let java_exe = Path::new(&java_home).join("bin").join(java_executable_name());
+        let java_exe = Path::new(&java_home)
+            .join("bin")
+            .join(java_executable_name());
         if java_exe.exists() {
             if let Ok(install) = parse_java_version(&java_exe).await {
                 installations.push(install);
@@ -57,20 +59,24 @@ pub async fn detect_system_java() -> Result<Vec<JavaInstallation>> {
         if let Ok(entries) = tokio::fs::read_dir(&dir).await {
             let mut entries = entries;
             while let Ok(Some(entry)) = entries.next_entry().await {
-                    let java_exe = entry.path().join("bin").join(java_executable_name());
-                    if java_exe.exists() {
-                        if let Ok(install) = parse_java_version(&java_exe).await {
-                            if !installations.iter().any(|i| i.path == install.path) {
-                                installations.push(install);
-                            }
+                let java_exe = entry.path().join("bin").join(java_executable_name());
+                if java_exe.exists() {
+                    if let Ok(install) = parse_java_version(&java_exe).await {
+                        if !installations.iter().any(|i| i.path == install.path) {
+                            installations.push(install);
                         }
                     }
                 }
             }
         }
+    }
 
     // Sort by version (newest first)
-    installations.sort_by(|a, b| b.major_version.cmp(&a.major_version).then_with(|| b.version.cmp(&a.version)));
+    installations.sort_by(|a, b| {
+        b.major_version
+            .cmp(&a.major_version)
+            .then_with(|| b.version.cmp(&a.version))
+    });
 
     Ok(installations)
 }
@@ -164,8 +170,8 @@ fn extract_version(output: &str) -> Option<String> {
         if line.contains("version") {
             // Pattern: version "X.Y.Z" or version "1.X.Y_Z"
             if let Some(start) = line.find('"') {
-                if let Some(end) = line[start+1..].find('"') {
-                    return Some(line[start+1..start+1+end].to_string());
+                if let Some(end) = line[start + 1..].find('"') {
+                    return Some(line[start + 1..start + 1 + end].to_string());
                 }
             }
         }
@@ -192,22 +198,40 @@ fn parse_major_version(version: &str) -> Option<u8> {
 
 fn extract_vendor(output: &str) -> String {
     let lower = output.to_lowercase();
-    if lower.contains("oracle") { "Oracle".into() }
-    else if lower.contains("openjdk") { "OpenJDK".into() }
-    else if lower.contains("adoptium") || lower.contains("temurin") { "Eclipse Temurin".into() }
-    else if lower.contains("azul") || lower.contains("zulu") { "Azul Zulu".into() }
-    else if lower.contains("amazon") || lower.contains("corretto") { "Amazon Corretto".into() }
-    else if lower.contains("microsoft") { "Microsoft".into() }
-    else if lower.contains("ibm") { "IBM".into() }
-    else { "Unknown".into() }
+    if lower.contains("oracle") {
+        "Oracle".into()
+    } else if lower.contains("openjdk") {
+        "OpenJDK".into()
+    } else if lower.contains("adoptium") || lower.contains("temurin") {
+        "Eclipse Temurin".into()
+    } else if lower.contains("azul") || lower.contains("zulu") {
+        "Azul Zulu".into()
+    } else if lower.contains("amazon") || lower.contains("corretto") {
+        "Amazon Corretto".into()
+    } else if lower.contains("microsoft") {
+        "Microsoft".into()
+    } else if lower.contains("ibm") {
+        "IBM".into()
+    } else {
+        "Unknown".into()
+    }
 }
 
 /// Find a Java installation matching the required major version
-pub fn find_java_for_version(installations: &[JavaInstallation], required_major: u8) -> Option<&JavaInstallation> {
+pub fn find_java_for_version(
+    installations: &[JavaInstallation],
+    required_major: u8,
+) -> Option<&JavaInstallation> {
     // Prefer exact match
-    installations.iter().find(|i| i.major_version == required_major)
+    installations
+        .iter()
+        .find(|i| i.major_version == required_major)
         // Fall back to newer compatible version
-        .or_else(|| installations.iter().find(|i| i.major_version > required_major))
+        .or_else(|| {
+            installations
+                .iter()
+                .find(|i| i.major_version > required_major)
+        })
 }
 
 #[cfg(test)]

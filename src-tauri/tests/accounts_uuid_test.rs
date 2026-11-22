@@ -1,5 +1,7 @@
 // Unit tests for offline UUID generation
-use offline_launcher_lib::accounts::{generate_offline_uuid, validate_username, OfflineAccount, Account};
+use offline_launcher_lib::accounts::{
+    generate_offline_uuid, validate_username, Account, OfflineAccount,
+};
 use uuid::Uuid;
 
 #[test]
@@ -30,7 +32,10 @@ fn test_generate_offline_uuid_deterministic() {
 fn test_generate_offline_uuid_different() {
     let uuid1 = generate_offline_uuid("Steve");
     let uuid2 = generate_offline_uuid("Alex");
-    assert_ne!(uuid1, uuid2, "Different usernames must produce different UUIDs");
+    assert_ne!(
+        uuid1, uuid2,
+        "Different usernames must produce different UUIDs"
+    );
 }
 
 #[test]
@@ -38,8 +43,14 @@ fn test_offline_account_creation() {
     let account = OfflineAccount::new("Steve".into()).unwrap();
     assert_eq!(account.username(), "Steve");
     assert_eq!(account.access_token(), "0");
-    assert_eq!(account.user_type(), offline_launcher_lib::accounts::UserType::Legacy);
-    assert_eq!(account.account_type(), offline_launcher_lib::accounts::AccountType::Offline);
+    assert_eq!(
+        account.user_type(),
+        offline_launcher_lib::accounts::UserType::Legacy
+    );
+    assert_eq!(
+        account.account_type(),
+        offline_launcher_lib::accounts::AccountType::Offline
+    );
 }
 
 #[test]
@@ -50,7 +61,7 @@ fn test_offline_account_uuid_format() {
     // UUID v3 has specific version bits (version 3 = 0011 in bits 12-15 of time_hi_and_version)
     let bytes = uuid.as_bytes();
     assert_eq!(bytes[6] & 0xF0, 0x30); // Version 3
-    // Variant should be RFC 4122 (10xx)
+                                       // Variant should be RFC 4122 (10xx)
     assert_eq!(bytes[8] & 0xC0, 0x80);
 }
 

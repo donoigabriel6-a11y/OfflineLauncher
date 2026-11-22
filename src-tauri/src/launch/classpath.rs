@@ -1,9 +1,9 @@
 //! Classpath construction for Minecraft launch
 
-use crate::versions::model::{VersionJson, Library};
 use crate::error::{LauncherError, Result};
-use std::path::{Path, PathBuf};
+use crate::versions::model::{Library, VersionJson};
 use std::io::Cursor;
+use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
 /// Build the complete classpath for launching Minecraft
@@ -40,14 +40,20 @@ pub fn build_classpath(
     }
 
     // Join with platform-specific separator
-    let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let separator = if cfg!(target_os = "windows") {
+        ";"
+    } else {
+        ":"
+    };
     Ok(classpath_entries.join(separator))
 }
 
 /// Get the path to a library artifact
 pub fn library_artifact_path(library: &Library, libraries_dir: &Path) -> Result<PathBuf> {
     // Prefer the exact Maven-relative path supplied by Mojang.
-    if let Some(path) = library.downloads.as_ref()
+    if let Some(path) = library
+        .downloads
+        .as_ref()
         .and_then(|downloads| downloads.artifact.as_ref())
         .and_then(|artifact| artifact.path.as_deref())
     {
@@ -81,7 +87,11 @@ pub async fn extract_natives(
 
         // Check if library has natives for current platform
         let Some(natives_map) = &library.natives else { continue };
-        let Some(classifiers) = library.downloads.as_ref().and_then(|downloads| downloads.classifiers.as_ref()) else {
+        let Some(classifiers) = library
+            .downloads
+            .as_ref()
+            .and_then(|downloads| downloads.classifiers.as_ref())
+        else {
             continue;
         };
 
@@ -90,30 +100,43 @@ pub async fn extract_natives(
         #[cfg(target_os = "windows")]
         let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
             &["windows-arm64", "windows"]
-        } else { &["windows"] };
+        } else {
+            &["windows"]
+        };
         #[cfg(target_os = "macos")]
         let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
             &["osx-arm64", "osx"]
-        } else { &["osx"] };
+        } else {
+            &["osx"]
+        };
         #[cfg(target_os = "linux")]
         let platform_keys: &[&str] = if cfg!(target_arch = "aarch64") {
             &["linux-aarch64", "linux"]
         } else if cfg!(target_arch = "arm") {
             &["linux-arm", "linux"]
-        } else { &["linux"] };
+        } else {
+            &["linux"]
+        };
         #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
         let platform_keys: &[&str] = &[];
 
-        let arch = if cfg!(target_pointer_width = "64") { "64" } else { "32" };
-        let native_classifier = platform_keys.iter()
+        let arch = if cfg!(target_pointer_width = "64") {
+            "64"
+        } else {
+            "32"
+        };
+        let native_classifier = platform_keys
+            .iter()
             .find_map(|key| natives_map.get(*key))
             .map(|classifier| classifier.replace("${arch}", arch));
 
         if let Some(native_classifier) = native_classifier {
             if classifiers.contains_key(&native_classifier) {
-                let artifact_path = library_native_path(library, libraries_dir, &native_classifier)?;
+                let artifact_path =
+                    library_native_path(library, libraries_dir, &native_classifier)?;
                 if artifact_path.exists() {
-                    extract_native_jar(&artifact_path, natives_dir, library.extract.as_ref()).await?;
+                    extract_native_jar(&artifact_path, natives_dir, library.extract.as_ref())
+                        .await?;
                 }
             }
         }
@@ -129,12 +152,17 @@ fn library_download_path(libraries_dir: &Path, relative_path: &str) -> Result<Pa
     if relative_path.is_empty()
         || relative_path.contains('\\')
         || relative_path.contains(':')
-        || path.components().any(|component| matches!(
-            component,
-            Component::ParentDir | Component::RootDir | Component::Prefix(_)
-        ))
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
     {
-        return Err(LauncherError::Launch(format!("Invalid library download path: {}", relative_path)));
+        return Err(LauncherError::Launch(format!(
+            "Invalid library download path: {}",
+            relative_path
+        )));
     }
 
     Ok(libraries_dir.join(path))
@@ -152,7 +180,10 @@ fn maven_artifact_path(
         .map(|(coordinate, extension)| (coordinate, extension))
         .unwrap_or((coordinate, "jar"));
     let parts: Vec<&str> = coordinate.split(':').collect();
-    if !(3..=4).contains(&parts.len()) || parts.iter().any(|part| part.is_empty()) || extension.is_empty() {
+    if !(3..=4).contains(&parts.len())
+        || parts.iter().any(|part| part.is_empty())
+        || extension.is_empty()
+    {
         return Err(LauncherError::Launch(format!(
             "Invalid library name format: {}",
             coordinate
@@ -163,8 +194,13 @@ fn maven_artifact_path(
     let artifact = parts[1];
     let version = parts[2];
     let classifier = classifier_override.or_else(|| parts.get(3).copied());
-    let classifier_suffix = classifier.map(|value| format!("-{}", value)).unwrap_or_default();
-    let filename = format!("{}-{}{}.{}", artifact, version, classifier_suffix, extension);
+    let classifier_suffix = classifier
+        .map(|value| format!("-{}", value))
+        .unwrap_or_default();
+    let filename = format!(
+        "{}-{}{}.{}",
+        artifact, version, classifier_suffix, extension
+    );
     let relative_path = format!("{}/{}/{}/{}", group_path, artifact, version, filename);
     library_download_path(libraries_dir, &relative_path)
 }
@@ -174,7 +210,9 @@ pub fn library_native_path(
     libraries_dir: &Path,
     classifier: &str,
 ) -> Result<PathBuf> {
-    if let Some(path) = library.downloads.as_ref()
+    if let Some(path) = library
+        .downloads
+        .as_ref()
         .and_then(|downloads| downloads.classifiers.as_ref())
         .and_then(|classifiers| classifiers.get(classifier))
         .and_then(|download| download.path.as_deref())
@@ -200,10 +238,7 @@ async fn extract_native_jar(
     let cursor = Cursor::new(buffer);
     let mut archive = ZipArchive::new(cursor)?;
 
-    let exclude_patterns = extract_rules
-    .map(|r| r.exclude.as_slice())
-    .unwrap_or(&[]);
-
+    let exclude_patterns = extract_rules.map(|r| r.exclude.as_slice()).unwrap_or(&[]);
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
@@ -213,7 +248,7 @@ async fn extract_native_jar(
         let excluded = exclude_patterns.iter().any(|pattern| {
             // Simple glob matching
             if pattern.ends_with('*') {
-                let prefix = &pattern[..pattern.len()-1];
+                let prefix = &pattern[..pattern.len() - 1];
                 name.starts_with(prefix)
             } else {
                 name == *pattern
@@ -261,7 +296,10 @@ mod tests {
         };
 
         let path = library_artifact_path(&library, Path::new("/libraries")).unwrap();
-        assert_eq!(path, PathBuf::from("/libraries/custom/repository/test-lib.jar"));
+        assert_eq!(
+            path,
+            PathBuf::from("/libraries/custom/repository/test-lib.jar")
+        );
     }
 
     #[test]
@@ -317,9 +355,7 @@ mod tests {
 
         assert_eq!(
             library_artifact_path(&library, Path::new("/libraries")).unwrap(),
-            PathBuf::from(
-                "/libraries/org/example/sample/2.1.0/sample-2.1.0-natives-windows.zip"
-            )
+            PathBuf::from("/libraries/org/example/sample/2.1.0/sample-2.1.0-natives-windows.zip")
         );
     }
 }

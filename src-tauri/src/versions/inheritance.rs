@@ -1,7 +1,7 @@
 //! Version JSON inheritance resolution (inheritsFrom)
 
-use crate::versions::model::VersionJson;
 use crate::error::{LauncherError, Result};
+use crate::versions::model::VersionJson;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -16,9 +16,10 @@ pub async fn resolve_inheritance(
 ) -> Result<VersionJson> {
     // Detect circular inheritance
     if visited.contains(&version_json.id) {
-        return Err(LauncherError::Inheritance(
-            format!("Circular inheritance detected: {}", version_json.id)
-        ));
+        return Err(LauncherError::Inheritance(format!(
+            "Circular inheritance detected: {}",
+            version_json.id
+        )));
     }
 
     visited.push(version_json.id.clone());
@@ -29,18 +30,22 @@ pub async fn resolve_inheritance(
     };
 
     // Load parent version JSON
-    let parent_path = versions_dir.join(&parent_id).join(format!("{}.json", parent_id));
+    let parent_path = versions_dir
+        .join(&parent_id)
+        .join(format!("{}.json", parent_id));
     if !parent_path.exists() {
-        return Err(LauncherError::Inheritance(
-            format!("Parent version not found: {}", parent_id)
-        ));
+        return Err(LauncherError::Inheritance(format!(
+            "Parent version not found: {}",
+            parent_id
+        )));
     }
 
-    let parent_content = tokio::fs::read_to_string(&parent_path).await
+    let parent_content = tokio::fs::read_to_string(&parent_path)
+        .await
         .map_err(|e| LauncherError::Io(e))?;
 
-    let mut parent_json: VersionJson = serde_json::from_str(&parent_content)
-        .map_err(|e| LauncherError::Serde(e))?;
+    let mut parent_json: VersionJson =
+        serde_json::from_str(&parent_content).map_err(|e| LauncherError::Serde(e))?;
 
     // Recursively resolve parent's inheritance
     parent_json = Box::pin(resolve_inheritance(parent_json, versions_dir, visited)).await?;
@@ -90,8 +95,12 @@ fn merge_version_json(mut parent: VersionJson, child: VersionJson) -> VersionJso
 }
 
 /// Merge libraries: child libraries with same name replace parent libraries
-fn merge_libraries(parent: Vec<crate::versions::model::Library>, child: Vec<crate::versions::model::Library>) -> Vec<crate::versions::model::Library> {
-    let mut map: HashMap<String, crate::versions::model::Library> = parent.into_iter()
+fn merge_libraries(
+    parent: Vec<crate::versions::model::Library>,
+    child: Vec<crate::versions::model::Library>,
+) -> Vec<crate::versions::model::Library> {
+    let mut map: HashMap<String, crate::versions::model::Library> = parent
+        .into_iter()
         .map(|lib| (lib.name.clone(), lib))
         .collect();
 
@@ -120,17 +129,20 @@ fn merge_arguments(
 
 /// Load a version JSON with full inheritance resolution
 pub async fn load_version_json(version_id: &str, versions_dir: &Path) -> Result<VersionJson> {
-    let version_path = versions_dir.join(version_id).join(format!("{}.json", version_id));
+    let version_path = versions_dir
+        .join(version_id)
+        .join(format!("{}.json", version_id));
 
     if !version_path.exists() {
         return Err(LauncherError::VersionNotFound(version_id.to_string()));
     }
 
-    let content = tokio::fs::read_to_string(&version_path).await
+    let content = tokio::fs::read_to_string(&version_path)
+        .await
         .map_err(|e| LauncherError::Io(e))?;
 
-    let version_json: VersionJson = serde_json::from_str(&content)
-        .map_err(|e| LauncherError::Serde(e))?;
+    let version_json: VersionJson =
+        serde_json::from_str(&content).map_err(|e| LauncherError::Serde(e))?;
 
     let mut visited = Vec::new();
     resolve_inheritance(version_json, versions_dir, &mut visited).await
@@ -139,7 +151,9 @@ pub async fn load_version_json(version_id: &str, versions_dir: &Path) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments};
+    use crate::versions::model::{
+        Arguments, AssetIndex, DownloadInfo, Downloads, JavaVersion, VersionJson,
+    };
 
     fn create_test_version(id: &str, inherits: Option<&str>, main_class: &str) -> VersionJson {
         VersionJson {
@@ -162,7 +176,12 @@ mod tests {
             arguments: Arguments { game: vec![], jvm: vec![], default_user_jvm: vec![] },
             minecraft_arguments: None,
             downloads: Downloads {
-                client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None },
+                client: DownloadInfo {
+                    url: "".to_string(),
+                    sha1: "".to_string(),
+                    size: 0,
+                    path: None,
+                },
                 server: None,
                 server_mappings: None,
             },

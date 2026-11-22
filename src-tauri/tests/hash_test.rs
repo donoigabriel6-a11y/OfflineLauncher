@@ -33,7 +33,7 @@ async fn test_compute_sha1() {
 
     let hash = compute_sha1(file.path()).await.unwrap();
     assert_eq!(hash.len(), 40); // SHA1 is 40 hex chars
-    // Verify it's valid hex
+                                // Verify it's valid hex
     assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
 }
 

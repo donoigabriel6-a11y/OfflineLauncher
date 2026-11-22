@@ -33,9 +33,7 @@ pub struct JavaManager {
 
 impl JavaManager {
     pub fn new() -> Self {
-        Self {
-            client: Client::new(),
-        }
+        Self { client: Client::new() }
     }
 
     /// Get the best Java for a given major version requirement
@@ -90,12 +88,17 @@ impl JavaManager {
             });
         }
 
-        Err(LauncherError::JavaNotFound(
-            format!("No suitable Java {} found", required_major)
-        ))
+        Err(LauncherError::JavaNotFound(format!(
+            "No suitable Java {} found",
+            required_major
+        )))
     }
 
-    async fn find_local_runtime(&self, runtimes_dir: &PathBuf, required_major: u8) -> Result<JavaSelection> {
+    async fn find_local_runtime(
+        &self,
+        runtimes_dir: &PathBuf,
+        required_major: u8,
+    ) -> Result<JavaSelection> {
         let mut entries = fs::read_dir(runtimes_dir).await?;
         while let Some(entry) = entries.next_entry().await? {
             let Ok(java_exe) = find_java_executable(&entry.path()) else { continue };
@@ -117,7 +120,10 @@ impl JavaManager {
         let runtimes_dir = get_java_runtimes_dir()?;
         fs::create_dir_all(&runtimes_dir).await?;
 
-        let filename = format!("java-{}-{}-{}", runtime.vendor, runtime.major_version, runtime.version);
+        let filename = format!(
+            "java-{}-{}-{}",
+            runtime.vendor, runtime.major_version, runtime.version
+        );
         let dest_dir = runtimes_dir.join(&filename);
         if let Ok(java_exe) = find_java_executable(&dest_dir) {
             return Ok(java_exe);
@@ -128,7 +134,11 @@ impl JavaManager {
         }
 
         tracing::info!("Downloading Java runtime from: {}", runtime.url);
-        let response = self.client.get(&runtime.url).send().await
+        let response = self
+            .client
+            .get(&runtime.url)
+            .send()
+            .await
             .map_err(LauncherError::Http)?;
         if !response.status().is_success() {
             return Err(LauncherError::Download(format!(
@@ -146,7 +156,11 @@ impl JavaManager {
             )));
         }
 
-        let archive_extension = if cfg!(target_os = "windows") { "zip" } else { "tar.gz" };
+        let archive_extension = if cfg!(target_os = "windows") {
+            "zip"
+        } else {
+            "tar.gz"
+        };
         let archive_path = runtimes_dir.join(format!("{}.{}", filename, archive_extension));
         fs::write(&archive_path, &archive_bytes).await?;
 
@@ -160,7 +174,8 @@ impl JavaManager {
             {
                 let mut archive = zip::ZipArchive::new(archive_file)
                     .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
-                archive.extract(&destination_for_extract)
+                archive
+                    .extract(&destination_for_extract)
                     .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
             }
 
@@ -172,7 +187,9 @@ impl JavaManager {
             }
 
             Ok(())
-        }).await.map_err(|error| {
+        })
+        .await
+        .map_err(|error| {
             LauncherError::Download(format!("Java runtime extraction task failed: {}", error))
         })?;
 

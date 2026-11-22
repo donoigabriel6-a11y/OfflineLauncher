@@ -118,10 +118,7 @@ pub fn latest_stable_quilt_loader_version(versions: &[QuiltLoaderVersion]) -> Op
 
 async fn response_text(response: reqwest::Response, operation: &str) -> Result<String> {
     let status = response.status();
-    let text = response
-        .text()
-        .await
-        .map_err(LauncherError::Http)?;
+    let text = response.text().await.map_err(LauncherError::Http)?;
     if !status.is_success() {
         return Err(LauncherError::ModLoader(format!(
             "{} failed: {} - {}",
@@ -231,24 +228,15 @@ mod tests {
     #[test]
     fn latest_stable_loader_uses_semver_not_build_number() {
         let versions = vec![
-            QuiltLoaderVersion {
-                version: "0.26.4".into(),
-                build: 4,
-                stable: true,
-            },
-            QuiltLoaderVersion {
-                version: "0.31.0-beta.1".into(),
-                build: 10,
-                stable: false,
-            },
-            QuiltLoaderVersion {
-                version: "0.30.2".into(),
-                build: 2,
-                stable: true,
-            },
+            QuiltLoaderVersion { version: "0.26.4".into(), build: 4, stable: true },
+            QuiltLoaderVersion { version: "0.31.0-beta.1".into(), build: 10, stable: false },
+            QuiltLoaderVersion { version: "0.30.2".into(), build: 2, stable: true },
         ];
 
-        assert_eq!(latest_stable_quilt_loader_version(&versions).as_deref(), Some("0.30.2"));
+        assert_eq!(
+            latest_stable_quilt_loader_version(&versions).as_deref(),
+            Some("0.30.2")
+        );
     }
 
     #[test]
@@ -264,7 +252,10 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(profile.main_class, "org.quiltmc.loader.impl.launch.knot.KnotClient");
+        assert_eq!(
+            profile.main_class,
+            "org.quiltmc.loader.impl.launch.knot.KnotClient"
+        );
         assert!(profile.java_version.is_none());
         assert_eq!(profile.arguments.jvm, vec!["-Dquilt.example=true"]);
         assert_eq!(profile.libraries.len(), 1);

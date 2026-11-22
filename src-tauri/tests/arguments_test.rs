@@ -1,7 +1,10 @@
 // Unit tests for argument parsing and placeholder substitution
+use offline_launcher_lib::accounts::{Account, OfflineAccount};
 use offline_launcher_lib::launch::arguments::{substitute_placeholders, LaunchArguments};
-use offline_launcher_lib::accounts::{OfflineAccount, Account};
-use offline_launcher_lib::versions::model::{VersionJson, JavaVersion, AssetIndex, Downloads, DownloadInfo, Arguments, Argument, ArgumentValue};
+use offline_launcher_lib::versions::model::{
+    Argument, ArgumentValue, Arguments, AssetIndex, DownloadInfo, Downloads, JavaVersion,
+    VersionJson,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -56,10 +59,16 @@ fn create_test_account() -> OfflineAccount {
 fn test_substitute_placeholders_basic() {
     let mut placeholders = HashMap::new();
     placeholders.insert("name".to_string(), "Steve".to_string());
-    placeholders.insert("uuid".to_string(), "12345678-1234-1234-1234-123456789012".to_string());
+    placeholders.insert(
+        "uuid".to_string(),
+        "12345678-1234-1234-1234-123456789012".to_string(),
+    );
 
     let result = substitute_placeholders("--username ${name} --uuid ${uuid}", &placeholders);
-    assert_eq!(result, "--username Steve --uuid 12345678-1234-1234-1234-123456789012");
+    assert_eq!(
+        result,
+        "--username Steve --uuid 12345678-1234-1234-1234-123456789012"
+    );
 }
 
 #[test]
@@ -94,10 +103,14 @@ fn test_launch_arguments_from_version() {
         "/classpath",
         "OfflineLauncher",
         "0.1.0",
-    ).unwrap();
+    )
+    .unwrap();
 
     // Check JVM args
-    assert!(args.jvm_args.iter().any(|a| a.contains("-Djava.library.path=/natives")));
+    assert!(args
+        .jvm_args
+        .iter()
+        .any(|a| a.contains("-Djava.library.path=/natives")));
 
     // Check game args
     assert!(args.game_args.iter().any(|a| a == "--username"));
@@ -118,24 +131,34 @@ fn test_conditional_arguments() {
         inherits_from: None,
         java_version: JavaVersion { component: "".to_string(), major_version: 21 },
         main_class: "Main".to_string(),
-        asset_index: AssetIndex { id: "".to_string(), url: "".to_string(), sha1: "".to_string(), size: 0, total_size: 0 },
+        asset_index: AssetIndex {
+            id: "".to_string(),
+            url: "".to_string(),
+            sha1: "".to_string(),
+            size: 0,
+            total_size: 0,
+        },
         assets: "".to_string(),
         libraries: vec![],
         arguments: Arguments {
-            game: vec![
-                Argument::Conditional(offline_launcher_lib::versions::model::ConditionalArgument {
+            game: vec![Argument::Conditional(
+                offline_launcher_lib::versions::model::ConditionalArgument {
                     rules: vec![serde_json::json!({
                         "action": "allow",
                         "os": { "name": "windows" }
                     })],
                     value: ArgumentValue::Single("--windows-only".to_string()),
-                }),
-            ],
+                },
+            )],
             jvm: vec![],
             default_user_jvm: vec![],
         },
         minecraft_arguments: None,
-        downloads: Downloads { client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None }, server: None, server_mappings: None },
+        downloads: Downloads {
+            client: DownloadInfo { url: "".to_string(), sha1: "".to_string(), size: 0, path: None },
+            server: None,
+            server_mappings: None,
+        },
         logging: None,
     };
 
@@ -143,13 +166,37 @@ fn test_conditional_arguments() {
 
     #[cfg(target_os = "windows")]
     {
-        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
+        let args = LaunchArguments::from_version(
+            &version,
+            &account,
+            &PathBuf::from("."),
+            &PathBuf::from("."),
+            &PathBuf::from("."),
+            "",
+            &PathBuf::from("."),
+            "",
+            "",
+            "",
+        )
+        .unwrap();
         assert!(args.game_args.contains(&"--windows-only".to_string()));
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        let args = LaunchArguments::from_version(&version, &account, &PathBuf::from("."), &PathBuf::from("."), &PathBuf::from("."), "", &PathBuf::from("."), "", "", "").unwrap();
+        let args = LaunchArguments::from_version(
+            &version,
+            &account,
+            &PathBuf::from("."),
+            &PathBuf::from("."),
+            &PathBuf::from("."),
+            "",
+            &PathBuf::from("."),
+            "",
+            "",
+            "",
+        )
+        .unwrap();
         assert!(!args.game_args.contains(&"--windows-only".to_string()));
     }
 }

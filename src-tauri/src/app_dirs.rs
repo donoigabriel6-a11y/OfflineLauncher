@@ -1,6 +1,6 @@
+use crate::error::{LauncherError, Result};
 use dirs;
 use std::path::{Path, PathBuf};
-use crate::error::{LauncherError, Result};
 
 /// Get the platform-correct application data directory for OfflineLauncher
 pub fn get_app_data_dir() -> Result<PathBuf> {
@@ -108,8 +108,7 @@ pub fn ensure_dirs() -> Result<()> {
 
     for dir in dirs {
         if !dir.exists() {
-            std::fs::create_dir_all(&dir)
-                .map_err(|e| LauncherError::Io(e))?;
+            std::fs::create_dir_all(&dir).map_err(|e| LauncherError::Io(e))?;
         }
     }
     Ok(())

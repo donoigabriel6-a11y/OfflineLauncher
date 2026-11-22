@@ -1,6 +1,8 @@
 // Unit tests for library rule evaluation
 use offline_launcher_lib::versions::library::{evaluate_library_rules, get_native_classifier};
-use offline_launcher_lib::versions::model::{LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName};
+use offline_launcher_lib::versions::model::{
+    LibraryRule, LibraryRuleAction, LibraryRuleOs, LibraryRuleOsName,
+};
 
 #[test]
 fn test_empty_rules_allow() {
@@ -9,21 +11,13 @@ fn test_empty_rules_allow() {
 
 #[test]
 fn test_allow_rule_no_os() {
-    let rules = vec![LibraryRule {
-        action: LibraryRuleAction::Allow,
-        os: None,
-        features: None,
-    }];
+    let rules = vec![LibraryRule { action: LibraryRuleAction::Allow, os: None, features: None }];
     assert!(evaluate_library_rules(&rules, true).unwrap());
 }
 
 #[test]
 fn test_disallow_rule_no_os() {
-    let rules = vec![LibraryRule {
-        action: LibraryRuleAction::Disallow,
-        os: None,
-        features: None,
-    }];
+    let rules = vec![LibraryRule { action: LibraryRuleAction::Disallow, os: None, features: None }];
     assert!(!evaluate_library_rules(&rules, true).unwrap());
 }
 
@@ -32,11 +26,7 @@ fn test_os_specific_allow() {
     let current_os = current_os_name();
     let rules = vec![LibraryRule {
         action: LibraryRuleAction::Allow,
-        os: Some(LibraryRuleOs {
-            name: current_os,
-            version: None,
-            arch: None,
-        }),
+        os: Some(LibraryRuleOs { name: current_os, version: None, arch: None }),
         features: None,
     }];
     assert!(evaluate_library_rules(&rules, true).unwrap());
@@ -51,11 +41,7 @@ fn test_os_specific_disallow() {
     };
     let rules = vec![LibraryRule {
         action: LibraryRuleAction::Disallow,
-        os: Some(LibraryRuleOs {
-            name: other_os,
-            version: None,
-            arch: None,
-        }),
+        os: Some(LibraryRuleOs { name: other_os, version: None, arch: None }),
         features: None,
     }];
     // Should be allowed since rule doesn't apply to current OS
@@ -66,18 +52,10 @@ fn test_os_specific_disallow() {
 fn test_multiple_rules_last_wins() {
     let current_os = current_os_name();
     let rules = vec![
-        LibraryRule {
-            action: LibraryRuleAction::Allow,
-            os: None,
-            features: None,
-        },
+        LibraryRule { action: LibraryRuleAction::Allow, os: None, features: None },
         LibraryRule {
             action: LibraryRuleAction::Disallow,
-            os: Some(LibraryRuleOs {
-                name: current_os,
-                version: None,
-                arch: None,
-            }),
+            os: Some(LibraryRuleOs { name: current_os, version: None, arch: None }),
             features: None,
         },
     ];

@@ -44,7 +44,7 @@ mod tests {
         // UUID v3 has specific version bits (version 3 = 0011 in bits 12-15 of time_hi_and_version)
         let bytes = uuid.as_bytes();
         assert_eq!(bytes[6] & 0xF0, 0x30); // Version 3
-        // Variant should be RFC 4122 (10xx)
+                                           // Variant should be RFC 4122 (10xx)
         assert_eq!(bytes[8] & 0xC0, 0x80);
     }
 
@@ -56,12 +56,18 @@ mod tests {
         // With version=3 (byte 6: bc->3c), variant=RFC4122 (byte 8: f8->b8)
         // = 5627dd98-e6be-3c21-b8a8-e92344183641
         let steve_uuid = generate_offline_uuid("Steve");
-        assert_eq!(steve_uuid.to_string(), "5627dd98-e6be-3c21-b8a8-e92344183641");
+        assert_eq!(
+            steve_uuid.to_string(),
+            "5627dd98-e6be-3c21-b8a8-e92344183641"
+        );
 
         // "Alex" -> MD5("OfflinePlayer:Alex") = 36532b5ec442edbb224cc7e55d0f979a
         // With version=3 (byte 6: ed->3d), variant=RFC4122 (byte 8: 22->a2)
         // = 36532b5e-c442-3dbb-a24c-c7e55d0f979a
         let alex_uuid = generate_offline_uuid("Alex");
-        assert_eq!(alex_uuid.to_string(), "36532b5e-c442-3dbb-a24c-c7e55d0f979a");
+        assert_eq!(
+            alex_uuid.to_string(),
+            "36532b5e-c442-3dbb-a24c-c7e55d0f979a"
+        );
     }
 }

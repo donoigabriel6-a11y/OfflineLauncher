@@ -39,15 +39,21 @@ pub struct JavaRuntime {
 
 /// Fetch Mojang's Java runtime manifest
 pub async fn fetch_java_runtimes(client: &Client) -> Result<Vec<JavaRuntime>> {
-    let response = client.get(MOJANG_JAVA_MANIFEST).send().await
+    let response = client
+        .get(MOJANG_JAVA_MANIFEST)
+        .send()
+        .await
         .map_err(|e| LauncherError::Http(e))?;
 
     if !response.status().is_success() {
-        return Err(LauncherError::Download(format!("Failed to fetch Java manifest: {}", response.status())));
+        return Err(LauncherError::Download(format!(
+            "Failed to fetch Java manifest: {}",
+            response.status()
+        )));
     }
 
-    let manifest: JavaRuntimeManifest = response.json().await
-        .map_err(|e| LauncherError::Http(e))?;
+    let manifest: JavaRuntimeManifest =
+        response.json().await.map_err(|e| LauncherError::Http(e))?;
 
     let mut runtimes = Vec::new();
 
@@ -114,22 +120,39 @@ fn parse_java_major_version(version: &str) -> Option<u8> {
 }
 
 fn current_os() -> &'static str {
-    #[cfg(target_os = "windows")] return "windows";
-    #[cfg(target_os = "macos")] return "macos";
-    #[cfg(target_os = "linux")] return "linux";
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))] return "unknown";
+    #[cfg(target_os = "windows")]
+    return "windows";
+    #[cfg(target_os = "macos")]
+    return "macos";
+    #[cfg(target_os = "linux")]
+    return "linux";
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    return "unknown";
 }
 
 fn current_arch() -> &'static str {
-    #[cfg(target_arch = "x86_64")] return "x64";
-    #[cfg(target_arch = "aarch64")] return "aarch64";
-    #[cfg(target_arch = "arm")] return "arm";
-    #[cfg(target_arch = "x86")] return "x86";
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm", target_arch = "x86")))] return "unknown";
+    #[cfg(target_arch = "x86_64")]
+    return "x64";
+    #[cfg(target_arch = "aarch64")]
+    return "aarch64";
+    #[cfg(target_arch = "arm")]
+    return "arm";
+    #[cfg(target_arch = "x86")]
+    return "x86";
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "arm",
+        target_arch = "x86"
+    )))]
+    return "unknown";
 }
 
 /// Fetch the latest Adoptium JDK archive for the current platform.
-pub async fn fetch_adoptium_runtimes(client: &Client, major_version: u8) -> Result<Vec<JavaRuntime>> {
+pub async fn fetch_adoptium_runtimes(
+    client: &Client,
+    major_version: u8,
+) -> Result<Vec<JavaRuntime>> {
     let url = format!(
         "https://api.adoptium.net/v3/assets/latest/{}/hotspot?architecture={}&os={}&vendor=eclipse&image_type=jdk",
         major_version,
@@ -137,8 +160,7 @@ pub async fn fetch_adoptium_runtimes(client: &Client, major_version: u8) -> Resu
         current_os()
     );
 
-    let response = client.get(&url).send().await
-        .map_err(LauncherError::Http)?;
+    let response = client.get(&url).send().await.map_err(LauncherError::Http)?;
 
     if !response.status().is_success() {
         return Ok(Vec::new());
@@ -174,33 +196,35 @@ pub async fn fetch_adoptium_runtimes(client: &Client, major_version: u8) -> Resu
         openjdk_version: Option<String>,
     }
 
-    let assets: Vec<AdoptiumAsset> = response.json().await
-        .map_err(LauncherError::Http)?;
+    let assets: Vec<AdoptiumAsset> = response.json().await.map_err(LauncherError::Http)?;
 
-    let runtimes = assets.into_iter().map(|asset| {
-        let version = asset.version.openjdk_version.unwrap_or_else(|| {
-            format!(
-                "{}.{}.{}+{}",
-                asset.version.major,
-                asset.version.minor,
-                asset.version.security,
-                asset.version.build
-            )
-        });
+    let runtimes = assets
+        .into_iter()
+        .map(|asset| {
+            let version = asset.version.openjdk_version.unwrap_or_else(|| {
+                format!(
+                    "{}.{}.{}+{}",
+                    asset.version.major,
+                    asset.version.minor,
+                    asset.version.security,
+                    asset.version.build
+                )
+            });
 
-        JavaRuntime {
-            version,
-            major_version: asset.version.major,
-            os: current_os().to_string(),
-            arch: current_arch().to_string(),
-            url: asset.binary.package.link,
-            // Adoptium's package checksum is SHA-256, not SHA-1. Leave this
-            // empty rather than incorrectly validating it as SHA-1.
-            sha1: String::new(),
-            size: asset.binary.package.size,
-            vendor: "adoptium".to_string(),
-        }
-    }).collect();
+            JavaRuntime {
+                version,
+                major_version: asset.version.major,
+                os: current_os().to_string(),
+                arch: current_arch().to_string(),
+                url: asset.binary.package.link,
+                // Adoptium's package checksum is SHA-256, not SHA-1. Leave this
+                // empty rather than incorrectly validating it as SHA-1.
+                sha1: String::new(),
+                size: asset.binary.package.size,
+                vendor: "adoptium".to_string(),
+            }
+        })
+        .collect();
 
     Ok(runtimes)
 }

@@ -1,14 +1,17 @@
 //! Game process spawning and management
 
 use crate::error::{LauncherError, Result};
-use crate::events::{emit_launch_output, emit_launch_status, LaunchOutputEvent, LaunchStatusEvent, LaunchStatus, OutputStream};
+use crate::events::{
+    emit_launch_output, emit_launch_status, LaunchOutputEvent, LaunchStatus, LaunchStatusEvent,
+    OutputStream,
+};
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
+use tauri::AppHandle;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
-use tauri::AppHandle;
 use uuid::Uuid;
 
 #[cfg(target_os = "windows")]
@@ -25,11 +28,7 @@ pub struct LaunchHandle {
 impl LaunchHandle {
     /// Create a new launch handle
     pub fn new(instance_id: Uuid) -> Self {
-        Self {
-            instance_id,
-            child: Arc::new(Mutex::new(None)),
-            pid: None,
-        }
+        Self { instance_id, child: Arc::new(Mutex::new(None)), pid: None }
     }
 
     /// Set the child process
@@ -43,7 +42,9 @@ impl LaunchHandle {
     pub async fn kill(&self) -> Result<()> {
         let mut guard = self.child.lock().await;
         if let Some(mut child) = guard.take() {
-            child.kill().await
+            child
+                .kill()
+                .await
                 .map_err(|e| LauncherError::Process(e.to_string()))?;
         }
         Ok(())
@@ -53,7 +54,9 @@ impl LaunchHandle {
     pub async fn wait(&self) -> Result<Option<i32>> {
         let mut guard = self.child.lock().await;
         if let Some(mut child) = guard.take() {
-            let status = child.wait().await
+            let status = child
+                .wait()
+                .await
                 .map_err(|e| LauncherError::Process(e.to_string()))?;
             Ok(status.code())
         } else {
@@ -104,45 +107,72 @@ impl GameProcess {
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
 
-        tracing::info!("Launching game: {} {:?} {} {:?}",
-            java_exe.display(), jvm_args, main_class, game_args);
+        tracing::info!(
+            "Launching game: {} {:?} {} {:?}",
+            java_exe.display(),
+            jvm_args,
+            main_class,
+            game_args
+        );
 
         // Emit starting status
-        emit_launch_status(&app, LaunchStatusEvent {
-            instance_id: instance_id.to_string(),
-            status: LaunchStatus::Starting,
-            exit_code: None,
-            pid: None,
-        })?;
+        emit_launch_status(
+            &app,
+            LaunchStatusEvent {
+                instance_id: instance_id.to_string(),
+                status: LaunchStatus::Starting,
+                exit_code: None,
+                pid: None,
+            },
+        )?;
 
         // Spawn process
         let child = match cmd.spawn() {
             Ok(child) => child,
             Err(error) => {
-                let _ = emit_launch_status(&app, LaunchStatusEvent {
-                    instance_id: instance_id.to_string(),
-                    status: LaunchStatus::Crashed,
-                    exit_code: None,
-                    pid: None,
-                });
-                return Err(LauncherError::Process(format!("Failed to spawn process: {}", error)));
-            }
+                let _ = emit_launch_status(
+                    &app,
+                    LaunchStatusEvent {
+                        instance_id: instance_id.to_string(),
+                        status: LaunchStatus::Crashed,
+                        exit_code: None,
+                        pid: None,
+                    },
+                );
+                return Err(LauncherError::Process(format!(
+                    "Failed to spawn process: {}",
+                    error
+                )));
+            },
         };
 
         let pid = child.id();
         handle.set_child(child).await;
 
         // Emit running status
-        emit_launch_status(&app, LaunchStatusEvent {
-            instance_id: instance_id.to_string(),
-            status: LaunchStatus::Running,
-            exit_code: None,
-            pid,
-        })?;
+        emit_launch_status(
+            &app,
+            LaunchStatusEvent {
+                instance_id: instance_id.to_string(),
+                status: LaunchStatus::Running,
+                exit_code: None,
+                pid,
+            },
+        )?;
 
         // Get stdout and stderr
-        let stdout = handle.child.lock().await.as_mut().and_then(|c| c.stdout.take());
-        let stderr = handle.child.lock().await.as_mut().and_then(|c| c.stderr.take());
+        let stdout = handle
+            .child
+            .lock()
+            .await
+            .as_mut()
+            .and_then(|c| c.stdout.take());
+        let stderr = handle
+            .child
+            .lock()
+            .await
+            .as_mut()
+            .and_then(|c| c.stderr.take());
 
         // Stream stdout
         if let Some(stdout) = stdout {
@@ -152,11 +182,14 @@ impl GameProcess {
                 let reader = BufReader::new(stdout);
                 let mut lines = reader.lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    let _ = emit_launch_output(&app_clone, LaunchOutputEvent {
-                        instance_id: instance_id_str.clone(),
-                        line,
-                        stream: OutputStream::Stdout,
-                    });
+                    let _ = emit_launch_output(
+                        &app_clone,
+                        LaunchOutputEvent {
+                            instance_id: instance_id_str.clone(),
+                            line,
+                            stream: OutputStream::Stdout,
+                        },
+                    );
                 }
             });
         }
@@ -185,30 +218,39 @@ impl GameProcess {
                             LaunchStatus::Crashed
                         };
                         monitor_handle.child.lock().await.take();
-                        let _ = emit_launch_status(&monitor_app, LaunchStatusEvent {
-                            instance_id: monitor_instance_id.clone(),
-                            status: launch_status,
-                            exit_code,
-                            pid,
-                        });
+                        let _ = emit_launch_status(
+                            &monitor_app,
+                            LaunchStatusEvent {
+                                instance_id: monitor_instance_id.clone(),
+                                status: launch_status,
+                                exit_code,
+                                pid,
+                            },
+                        );
                         break;
-                    }
+                    },
                     Ok(None) => tokio::time::sleep(std::time::Duration::from_millis(500)).await,
                     Err(error) => {
-                        let _ = emit_launch_output(&monitor_app, LaunchOutputEvent {
-                            instance_id: monitor_instance_id.clone(),
-                            line: format!("Failed to monitor game process: {}", error),
-                            stream: OutputStream::Stderr,
-                        });
+                        let _ = emit_launch_output(
+                            &monitor_app,
+                            LaunchOutputEvent {
+                                instance_id: monitor_instance_id.clone(),
+                                line: format!("Failed to monitor game process: {}", error),
+                                stream: OutputStream::Stderr,
+                            },
+                        );
                         monitor_handle.child.lock().await.take();
-                        let _ = emit_launch_status(&monitor_app, LaunchStatusEvent {
-                            instance_id: monitor_instance_id.clone(),
-                            status: LaunchStatus::Crashed,
-                            exit_code: None,
-                            pid,
-                        });
+                        let _ = emit_launch_status(
+                            &monitor_app,
+                            LaunchStatusEvent {
+                                instance_id: monitor_instance_id.clone(),
+                                status: LaunchStatus::Crashed,
+                                exit_code: None,
+                                pid,
+                            },
+                        );
                         break;
-                    }
+                    },
                 }
             }
         });
@@ -221,11 +263,14 @@ impl GameProcess {
                 let reader = BufReader::new(stderr);
                 let mut lines = reader.lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    let _ = emit_launch_output(&app_clone, LaunchOutputEvent {
-                        instance_id: instance_id_str.clone(),
-                        line,
-                        stream: OutputStream::Stderr,
-                    });
+                    let _ = emit_launch_output(
+                        &app_clone,
+                        LaunchOutputEvent {
+                            instance_id: instance_id_str.clone(),
+                            line,
+                            stream: OutputStream::Stderr,
+                        },
+                    );
                 }
             });
         }
@@ -249,7 +294,16 @@ pub async fn launch_game(
     game_args: Vec<String>,
     working_dir: &Path,
 ) -> Result<GameProcess> {
-    GameProcess::launch(app, instance_id, java_exe, jvm_args, main_class, game_args, working_dir).await
+    GameProcess::launch(
+        app,
+        instance_id,
+        java_exe,
+        jvm_args,
+        main_class,
+        game_args,
+        working_dir,
+    )
+    .await
 }
 
 #[cfg(test)]
