@@ -104,6 +104,7 @@ export const contentApi = {
     contentType: ContentCategory;
     projectId: string;
     versionId: string;
+    minecraftVersion: string;
   }) => handleTauriError(invoke<ContentInstallResult>('content_install', args)),
   listInstalled: (instanceId: string) =>
     handleTauriError(invoke<InstalledContent[]>('content_list_installed', { instanceId })),

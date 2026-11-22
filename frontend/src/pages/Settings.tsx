@@ -41,7 +41,10 @@ export function Settings() {
       .listRuntimes()
       .then(setJavaRuntimes)
       .catch(() => {});
-    contentApi.curseForgeKeyStatus().then(setCurseForgeKeySet).catch(() => {});
+    contentApi
+      .curseForgeKeyStatus()
+      .then(setCurseForgeKeySet)
+      .catch(() => {});
   }, [setConfig, toast]);
 
   const handleSave = async () => {
@@ -276,7 +279,10 @@ export function Settings() {
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
               <p className="text-sm text-surface-400">
-                Key status: <span className={curseForgeKeySet ? 'text-green-400' : 'text-surface-500'}>{curseForgeKeySet ? 'Configured' : 'Not configured'}</span>
+                Key status:{' '}
+                <span className={curseForgeKeySet ? 'text-green-400' : 'text-surface-500'}>
+                  {curseForgeKeySet ? 'Configured' : 'Not configured'}
+                </span>
               </p>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
                 <Input
@@ -298,10 +304,18 @@ export function Settings() {
                       await contentApi.setCurseForgeKey(curseForgeKey);
                       setCurseForgeKey('');
                       setCurseForgeKeySet(true);
-                      toast({ type: 'success', title: 'API Key Saved', message: 'CurseForge access is configured.' });
+                      toast({
+                        type: 'success',
+                        title: 'API Key Saved',
+                        message: 'CurseForge access is configured.',
+                      });
                     } catch (error) {
                       setCurseForgeKey('');
-                      toast({ type: 'error', title: 'Could Not Save API Key', message: error instanceof Error ? error.message : 'Unknown error' });
+                      toast({
+                        type: 'error',
+                        title: 'Could Not Save API Key',
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                      });
                     } finally {
                       setSavingCurseForgeKey(false);
                     }
@@ -319,9 +333,17 @@ export function Settings() {
                       await contentApi.clearCurseForgeKey();
                       setCurseForgeKey('');
                       setCurseForgeKeySet(false);
-                      toast({ type: 'success', title: 'API Key Cleared', message: 'CurseForge access key removed.' });
+                      toast({
+                        type: 'success',
+                        title: 'API Key Cleared',
+                        message: 'CurseForge access key removed.',
+                      });
                     } catch (error) {
-                      toast({ type: 'error', title: 'Could Not Clear API Key', message: error instanceof Error ? error.message : 'Unknown error' });
+                      toast({
+                        type: 'error',
+                        title: 'Could Not Clear API Key',
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                      });
                     } finally {
                       setSavingCurseForgeKey(false);
                     }

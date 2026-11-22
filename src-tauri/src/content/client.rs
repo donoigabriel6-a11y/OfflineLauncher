@@ -200,12 +200,12 @@ pub async fn modrinth_version_file(
 
     let file = version
         .files
-        .into_iter()
+        .iter()
         .find(|f| f.primary.unwrap_or(false))
-        .or_else(|| version.files.into_iter().next())
+        .or_else(|| version.files.iter().next())
         .ok_or_else(|| LauncherError::NotFound(format!("No files for version {version_id}")))?;
 
-    Ok((file.url, file.filename))
+    Ok((file.url.clone(), file.filename.clone()))
 }
 
 // ---------------------------------------------------------------------------
