@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useStore } from '@/store/useStore';
 import { useToast } from '@/components/ui/Toaster';
-import { configApi, javaApi } from '@/services/api';
+import { configApi, contentApi, javaApi } from '@/services/api';
 import type { Config, JavaSelection } from '@/types';
 import { FolderOpen, Save, RotateCcw, Info, CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,9 @@ export function Settings() {
   const [javaRuntimes, setJavaRuntimes] = useState<JavaSelection[]>([]);
   const [testingJava, setTestingJava] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [curseForgeKeySet, setCurseForgeKeySet] = useState(false);
+  const [curseForgeKey, setCurseForgeKey] = useState('');
+  const [savingCurseForgeKey, setSavingCurseForgeKey] = useState(false);
 
   // Load config on mount
   useEffect(() => {
@@ -37,6 +40,10 @@ export function Settings() {
     javaApi
       .listRuntimes()
       .then(setJavaRuntimes)
+      .catch(() => {});
+    contentApi
+      .curseForgeKeyStatus()
+      .then(setCurseForgeKeySet)
       .catch(() => {});
   }, [setConfig, toast]);
 
@@ -256,6 +263,95 @@ export function Settings() {
               >
                 Open Data Directory
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Marketplace provider key */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary-500" />
+                CurseForge Access
+              </CardTitle>
+              <CardDescription>
+                Add your CurseForge API key to browse and install CurseForge content.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
+              <p className="text-sm text-surface-400">
+                Key status:{' '}
+                <span className={curseForgeKeySet ? 'text-green-400' : 'text-surface-500'}>
+                  {curseForgeKeySet ? 'Configured' : 'Not configured'}
+                </span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                <Input
+                  label="CurseForge API Key"
+                  type="password"
+                  autoComplete="new-password"
+                  value={curseForgeKey}
+                  onChange={(event) => setCurseForgeKey(event.target.value)}
+                  placeholder="Paste your API key"
+                  helperText="The key is stored securely by the launcher and is never displayed after saving."
+                />
+                <Button
+                  className="self-end"
+                  disabled={!curseForgeKey.trim() || savingCurseForgeKey}
+                  loading={savingCurseForgeKey}
+                  onClick={async () => {
+                    setSavingCurseForgeKey(true);
+                    try {
+                      await contentApi.setCurseForgeKey(curseForgeKey);
+                      setCurseForgeKey('');
+                      setCurseForgeKeySet(true);
+                      toast({
+                        type: 'success',
+                        title: 'API Key Saved',
+                        message: 'CurseForge access is configured.',
+                      });
+                    } catch (error) {
+                      setCurseForgeKey('');
+                      toast({
+                        type: 'error',
+                        title: 'Could Not Save API Key',
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                      });
+                    } finally {
+                      setSavingCurseForgeKey(false);
+                    }
+                  }}
+                >
+                  Save Key
+                </Button>
+                <Button
+                  className="self-end"
+                  variant="secondary"
+                  disabled={!curseForgeKeySet || savingCurseForgeKey}
+                  onClick={async () => {
+                    setSavingCurseForgeKey(true);
+                    try {
+                      await contentApi.clearCurseForgeKey();
+                      setCurseForgeKey('');
+                      setCurseForgeKeySet(false);
+                      toast({
+                        type: 'success',
+                        title: 'API Key Cleared',
+                        message: 'CurseForge access key removed.',
+                      });
+                    } catch (error) {
+                      toast({
+                        type: 'error',
+                        title: 'Could Not Clear API Key',
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                      });
+                    } finally {
+                      setSavingCurseForgeKey(false);
+                    }
+                  }}
+                >
+                  Clear Key
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

@@ -13,6 +13,12 @@ import type {
   FabricLoaderVersion,
   QuiltVersion,
   QuiltLoaderVersion,
+  ContentProvider,
+  ContentCategory,
+  ContentSearchResult,
+  ContentVersion,
+  ContentInstallResult,
+  InstalledContent,
 } from '@/types';
 
 // Helper to convert Tauri string errors to Error objects
@@ -74,6 +80,40 @@ export const instancesApi = {
   clone: (id: string, newName: string) =>
     handleTauriError(invoke<Instance>('instances_clone', { id, newName })),
   openFolder: (id: string) => handleTauriError(invoke('instances_open_folder', { id })),
+};
+
+// Marketplace content
+export const contentApi = {
+  search: (args: {
+    provider: ContentProvider;
+    contentType: ContentCategory;
+    query: string;
+    minecraftVersion: string;
+    loader?: string;
+    offset?: number;
+  }) => handleTauriError(invoke<ContentSearchResult>('content_search', args)),
+  versions: (args: {
+    provider: ContentProvider;
+    projectId: string;
+    minecraftVersion: string;
+    loader?: string;
+  }) => handleTauriError(invoke<ContentVersion[]>('content_versions', args)),
+  install: (args: {
+    instanceId: string;
+    provider: ContentProvider;
+    contentType: ContentCategory;
+    projectId: string;
+    versionId: string;
+    minecraftVersion: string;
+  }) => handleTauriError(invoke<ContentInstallResult>('content_install', args)),
+  listInstalled: (instanceId: string) =>
+    handleTauriError(invoke<InstalledContent[]>('content_list_installed', { instanceId })),
+  uninstall: (instanceId: string, installId: string) =>
+    handleTauriError(invoke('content_uninstall', { instanceId, installId })),
+  curseForgeKeyStatus: () => handleTauriError(invoke<boolean>('curseforge_key_status')),
+  setCurseForgeKey: (apiKey: string) => handleTauriError(invoke('curseforge_key_set', { apiKey })),
+  clearCurseForgeKey: () => handleTauriError(invoke('curseforge_key_clear')),
+  listInstances: () => handleTauriError(invoke<Instance[]>('instances_list')),
 };
 
 // Launch

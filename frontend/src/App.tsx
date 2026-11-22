@@ -15,6 +15,9 @@ const Versions = lazy(() =>
 const Instances = lazy(() =>
   import('@/pages/Instances').then((module) => ({ default: module.Instances }))
 );
+const ContentBrowser = lazy(() =>
+  import('@/pages/ContentBrowser').then((module) => ({ default: module.ContentBrowser }))
+);
 const Settings = lazy(() =>
   import('@/pages/Settings').then((module) => ({ default: module.Settings }))
 );
@@ -63,6 +66,14 @@ function App() {
             element={
               <Suspense fallback={<PageLoading />}>
                 <Instances />
+              </Suspense>
+            }
+          />
+          <Route
+            path="content"
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <ContentBrowser />
               </Suspense>
             }
           />
